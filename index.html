@@ -1,0 +1,1341 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>PiutangKu - Sistem Manajemen Piutang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/sql-wasm.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:'Inter',sans-serif;background:#f8f9fa;color:#333}
+.app-wrapper{display:flex;height:100vh;flex-direction:column}
+.header{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header-left{display:flex;gap:20px;align-items:center}
+.logo{font-size:24px;font-weight:800}
+.user-info{font-size:12px;opacity:0.9}
+.main-container{display:flex;flex:1;overflow:hidden}
+.sidebar{width:250px;background:white;border-right:1px solid #e5e7eb;overflow-y:auto}
+.sidebar-menu{padding:20px 0}
+.sidebar-menu a{display:block;padding:12px 20px;color:#666;text-decoration:none;border-left:3px solid transparent;transition:all 0.3s}
+.sidebar-menu a:hover,.sidebar-menu a.active{background:#f3f4f6;color:#2563eb;border-left-color:#2563eb}
+.content{flex:1;overflow-y:auto;padding:20px}
+.container{max-width:1400px;margin:0 auto}
+.page-title{font-size:28px;font-weight:800;margin-bottom:20px;color:#1f2937}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:30px}
+.stat-card{background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08)}
+.stat-card h3{font-size:12px;color:#666;margin-bottom:8px;text-transform:uppercase}
+.stat-value{font-size:28px;font-weight:800;color:#2563eb}
+.stat-card.primary{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white}
+.stat-card.primary h3{color:rgba(255,255,255,0.8)}
+.stat-card.primary .stat-value{color:white}
+.form-section{background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:20px}
+.form-section h2{font-size:18px;font-weight:700;margin-bottom:20px}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
+.form-group{display:grid;gap:6px}
+.form-group label{font-size:12px;font-weight:600;color:#555}
+.form-group input,.form-group select,.form-group textarea{padding:10px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;font-size:13px}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
+.btn{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.3s}
+.btn-primary{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,0.3)}
+.btn-secondary{background:#e5e7eb;color:#333}
+.btn-secondary:hover{background:#d1d5db}
+.btn-danger{background:#ef4444;color:white}
+.btn-danger:hover{background:#dc2626}
+.btn-success{background:#10b981;color:white}
+.btn-success:hover{background:#059669}
+.btn-small{padding:6px 12px;font-size:11px}
+.table-wrapper{overflow-x:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden}
+th{background:#f3f4f6;padding:12px;text-align:left;font-weight:600;font-size:12px;color:#666;border-bottom:2px solid #e5e7eb}
+td{padding:12px;border-bottom:1px solid #e5e7eb;font-size:13px}
+tr:hover{background:#f9fafb}
+.badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-success{background:#d1fae5;color:#065f46}
+.badge-warning{background:#fef3c7;color:#92400e}
+.badge-danger{background:#fee2e2;color:#991b1b}
+.badge-info{background:#dbeafe;color:#1e40af}
+.upload-zone{border:2px dashed #d1d5db;border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.3s}
+.upload-zone:hover{border-color:#2563eb;background:#f0f7ff}
+.upload-zone.dragover{border-color:#2563eb;background:#f0f7ff}
+.file-input{display:none}
+.chart-container{background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:20px}
+.alert{padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px}
+.alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
+.alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
+.alert-warning{background:#fef3c7;border:1px solid #fde68a;color:#92400e}
+.button-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.hidden{display:none!important}
+@media print{body{background:white}.sidebar,.header,.main-container{display:none}.content{padding:0}table{box-shadow:none}}
+@media(max-width:768px){.sidebar{width:60px}.sidebar-menu a span{display:none}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.main-container{flex-direction:column}.sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e5e7eb}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+
+<script>
+// ============ DATABASE SETUP ============
+let db, SQL;
+let currentUser = null;
+let currentPage = 'login';
+const IDB_NAME = 'PiutangKuDB';
+const IDB_STORE = 'database';
+
+// ============ UTILITY FUNCTIONS ============
+const fmt = (n) => new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0}).format(Number(n) || 0);
+const today = () => new Date().toISOString().split('T')[0];
+const toast = (msg, type = 'info') => {
+  const container = document.querySelector('.toast-container') || (() => {
+    const div = document.createElement('div');
+    div.className = 'toast-container';
+    div.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2000';
+    document.body.appendChild(div);
+    return div;
+  })();
+  const el = document.createElement('div');
+  el.className = `alert alert-${type}`;
+  el.style.cssText = 'margin:0;position:relative';
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+};
+
+// ============ INDEXEDDB ============
+async function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+  });
+}
+
+async function saveDB() {
+  const idb = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, 'readwrite');
+    const request = tx.objectStore(IDB_STORE).put(db.export(), 'main');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve();
+  });
+}
+
+async function loadDB() {
+  const idb = await initDB();
+  return new Promise((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, 'readonly');
+    const request = tx.objectStore(IDB_STORE).get('main');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+  });
+}
+
+// ============ SCHEMA ============
+function createSchema() {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT CHECK(role IN('admin','sales','finance','manager','owner')) DEFAULT 'sales',
+      status TEXT DEFAULT 'active'
+    );
+
+    CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      address TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS invoices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_no TEXT UNIQUE NOT NULL,
+      customer_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      paid_amount REAL DEFAULT 0,
+      remaining_amount REAL DEFAULT 0,
+      due_date TEXT NOT NULL,
+      status TEXT DEFAULT 'unpaid',
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(customer_id) REFERENCES customers(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      payment_date TEXT NOT NULL,
+      method TEXT,
+      notes TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(invoice_id) REFERENCES invoices(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      report_no TEXT UNIQUE NOT NULL,
+      report_type TEXT,
+      period_start TEXT,
+      period_end TEXT,
+      created_by INTEGER,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+  `);
+}
+
+function seedData() {
+  try {
+    const result = db.exec("SELECT COUNT(*) as count FROM users");
+    if (result[0] && result[0].values[0][0] > 0) return;
+
+    db.run("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)", ['Andi Pratama', 'admin@piutangku.local', 'admin123', 'admin', 'active']);
+    db.run("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)", ['Rina Oktaviani', 'sales@piutangku.local', 'sales123', 'sales', 'active']);
+    db.run("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)", ['Siti Rahmawati', 'keuangan@piutangku.local', 'keuangan123', 'finance', 'active']);
+    db.run("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)", ['Dedi Kurniawan', 'manager@piutangku.local', 'manager123', 'manager', 'active']);
+    db.run("INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)", ['Budi Santoso', 'owner@piutangku.local', 'owner123', 'owner', 'active']);
+
+    db.run("INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)", ['PT Sumber Makmur', '081234567001', 'finance@sumber.com', 'Jakarta']);
+    db.run("INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)", ['CV Maju Jaya', '081234567002', 'admin@maju.com', 'Bandung']);
+    db.run("INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)", ['Toko Berkah Abadi', '081234567003', 'toko@berkah.com', 'Surabaya']);
+
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-001', 1, 5000000, '2026-07-20', 'unpaid']);
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-002', 2, 3000000, '2026-07-15', 'partial']);
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-003', 3, 2000000, '2026-07-25', 'paid']);
+
+    db.run("INSERT INTO payments (invoice_id, amount, payment_date, method) VALUES (?, ?, ?, ?)", [2, 1500000, today(), 'Transfer']);
+  } catch (e) {
+    console.error('Seed error:', e);
+  }
+}
+
+// ============ QUERY FUNCTIONS ============
+function getQuery(sql, params = []) {
+  try {
+    const result = db.exec(sql, params);
+    if (result.length === 0) return [];
+    const columns = result[0].columns;
+    return result[0].values.map(row => {
+      const obj = {};
+      columns.forEach((col, i) => obj[col] = row[i]);
+      return obj;
+    });
+  } catch (e) {
+    console.error('Query error:', e);
+    return [];
+  }
+}
+
+function execSQL(sql, params = []) {
+  try {
+    db.run(sql, params);
+    saveDB();
+    return true;
+  } catch (e) {
+    console.error('Exec error:', e);
+    return false;
+  }
+}
+
+// ============ EXPORT/IMPORT CSV ============
+function downloadCSV(data, filename) {
+  if (!data || data.length === 0) {
+    toast('Tidak ada data untuk diunduh', 'warning');
+    return;
+  }
+  
+  const headers = Object.keys(data[0]);
+  const csv = [headers.join(','), ...data.map(row => headers.map(h => {
+    const val = row[h];
+    return typeof val === 'string' && val.includes(',') ? `"${val}"` : val;
+  }).join(','))].join('\n');
+  
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const link = document.createElement('a');
+  link.setAttribute('href', URL.createObjectURL(blob));
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast('File berhasil diunduh: ' + filename, 'success');
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  if (lines.length < 2) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = values[i]);
+    return obj;
+  });
+}
+
+function uploadCustomersFromCSV(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = parseCSV(e.target.result);
+      let count = 0;
+      data.forEach(row => {
+        if (row.name) {
+          execSQL('INSERT INTO customers (name, email, phone, address) VALUES (?, ?, ?, ?)', 
+            [row.name, row.email || '', row.phone || '', row.address || '']);
+          count++;
+        }
+      });
+      toast(`${count} pelanggan berhasil diimpor`, 'success');
+      render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function uploadInvoicesFromCSV(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = parseCSV(e.target.result);
+      let count = 0;
+      data.forEach(row => {
+        if (row.invoice_no && row.customer_id && row.amount && row.due_date) {
+          execSQL('INSERT INTO invoices (invoice_no, customer_id, amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)',
+            [row.invoice_no, parseInt(row.customer_id), parseFloat(row.amount), parseFloat(row.amount), row.due_date, row.status || 'unpaid']);
+          count++;
+        }
+      });
+      toast(`${count} faktur berhasil diimpor`, 'success');
+      render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function uploadPaymentsFromCSV(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = parseCSV(e.target.result);
+      let count = 0;
+      data.forEach(row => {
+        if (row.invoice_id && row.amount && row.payment_date) {
+          execSQL('INSERT INTO payments (invoice_id, amount, payment_date, method, notes) VALUES (?, ?, ?, ?, ?)',
+            [parseInt(row.invoice_id), parseFloat(row.amount), row.payment_date, row.method || '', row.notes || '']);
+          count++;
+        }
+      });
+      toast(`${count} pembayaran berhasil diimpor`, 'success');
+      render();
+    } catch (err) {
+      toast('Error: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ============ AUTH ============
+function login(email, password) {
+  if (!email || !password) {
+    toast('Email dan password harus diisi', 'error');
+    return false;
+  }
+  const users = getQuery('SELECT * FROM users WHERE email = ? AND password = ? AND status = ?', [email, password, 'active']);
+  if (users.length === 0) {
+    toast('Email atau password salah', 'error');
+    return false;
+  }
+  currentUser = users[0];
+  currentPage = 'dashboard';
+  render();
+  return true;
+}
+
+function logout() {
+  currentUser = null;
+  currentPage = 'login';
+  render();
+}
+
+// ============ PAGE RENDERS ============
+function renderLogin() {
+  return `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%)">
+      <div style="background:white;padding:40px;border-radius:15px;box-shadow:0 10px 40px rgba(0,0,0,0.2);max-width:400px;width:90%">
+        <h1 style="text-align:center;color:#2563eb;margin-bottom:10px">🏦 PiutangKu</h1>
+        <p style="text-align:center;color:#666;margin-bottom:30px;font-size:14px">Sistem Manajemen Piutang</p>
+        
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="loginEmail" value="admin@piutangku.local">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" value="admin123">
+        </div>
+        
+        <button class="btn btn-primary" style="width:100%;margin-top:20px" onclick="handleLogin()">Masuk</button>
+        
+        <div style="margin-top:20px;padding:15px;background:#f3f4f6;border-radius:8px;font-size:12px">
+          <strong>Demo Accounts:</strong><br>
+          admin@piutangku.local / admin123<br>
+          sales@piutangku.local / sales123<br>
+          keuangan@piutangku.local / keuangan123<br>
+          manager@piutangku.local / manager123<br>
+          owner@piutangku.local / owner123
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderApp() {
+  const roleLabels = {admin:'Admin', sales:'Staf Penjualan', finance:'Staf Keuangan', manager:'Manajer Keuangan', owner:'Pemilik Perusahaan'};
+  
+  const menus = ['dashboard','executive','users','customers','invoices','payments','reports','import-export','settings'];
+
+  const menuLabels = {
+    dashboard:'📊 Dashboard',
+    executive:'📈 Dashboard Eksekutif',
+    users:'👥 Pengguna',
+    customers:'🏢 Pelanggan',
+    invoices:'🧾 Piutang',
+    payments:'💳 Pembayaran',
+    reports:'📄 Laporan',
+    'import-export':'📥 Import/Export',
+    settings:'⚙️ Pengaturan'
+  };
+
+  let content = '';
+  if (currentPage === 'dashboard') content = renderDashboard();
+  else if (currentPage === 'executive') content = renderExecutiveDashboard();
+  else if (currentPage === 'users') content = renderUsers();
+  else if (currentPage === 'customers') content = renderCustomers();
+  else if (currentPage === 'invoices') content = renderInvoices();
+  else if (currentPage === 'payments') content = renderPayments();
+  else if (currentPage === 'reports') content = renderReports();
+  else if (currentPage === 'import-export') content = renderImportExport();
+  else if (currentPage === 'settings') content = renderSettings();
+  else content = renderDashboard();
+
+  return `
+    <div class="app-wrapper">
+      <div class="header">
+        <div class="header-left">
+          <div class="logo">🏦 PiutangKu</div>
+          <div class="user-info">
+            <strong>${currentUser.name}</strong><br>
+            ${roleLabels[currentUser.role]}
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-small" onclick="logout()">Logout</button>
+      </div>
+      
+      <div class="main-container">
+        <div class="sidebar">
+          <div class="sidebar-menu">
+            ${menus.map(m => `
+              <a href="#" onclick="goToPage('${m}');return false" class="sidebar-menu-item ${currentPage === m ? 'active' : ''}">
+                <span>${menuLabels[m]}</span>
+              </a>
+            `).join('')}
+          </div>
+        </div>
+        
+        <div class="content">
+          ${content}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDashboard() {
+  const stats = getQuery(`
+    SELECT 
+      (SELECT COUNT(*) FROM customers) as total_customers,
+      (SELECT COUNT(*) FROM invoices) as total_invoices,
+      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
+      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
+      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount
+  `)[0];
+
+  const recentInvoices = getQuery(`
+    SELECT i.*, c.name as customer_name 
+    FROM invoices i 
+    JOIN customers c ON i.customer_id = c.id 
+    ORDER BY i.created_at DESC 
+    LIMIT 5
+  `);
+
+  return `
+    <div class="container">
+      <h1 class="page-title">Dashboard</h1>
+      
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <h3>Total Piutang</h3>
+          <div class="stat-value">${fmt(stats.total_amount)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Sisa Piutang</h3>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Total Pelanggan</h3>
+          <div class="stat-value">${stats.total_customers}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Piutang Jatuh Tempo</h3>
+          <div class="stat-value">${stats.overdue_count}</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Transaksi Terbaru</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Faktur</th>
+                <th>Pelanggan</th>
+                <th>Jumlah</th>
+                <th>Jatuh Tempo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${recentInvoices.map(inv => `
+                <tr>
+                  <td><strong>${inv.invoice_no}</strong></td>
+                  <td>${inv.customer_name}</td>
+                  <td>${fmt(inv.amount)}</td>
+                  <td>${inv.due_date}</td>
+                  <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderExecutiveDashboard() {
+  const stats = getQuery(`
+    SELECT 
+      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
+      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount,
+      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
+      (SELECT COUNT(*) FROM customers) as total_customers
+  `)[0];
+
+  const topDebtors = getQuery(`
+    SELECT c.name, SUM(i.remaining_amount) as total_remaining
+    FROM invoices i
+    JOIN customers c ON i.customer_id = c.id
+    WHERE i.status != 'paid'
+    GROUP BY c.id
+    ORDER BY total_remaining DESC
+    LIMIT 5
+  `);
+
+  return `
+    <div class="container">
+      <h1 class="page-title">Dashboard Eksekutif</h1>
+      
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <h3>Total Piutang</h3>
+          <div class="stat-value">${fmt(stats.total_amount)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Total Pembayaran</h3>
+          <div class="stat-value" style="color:#10b981">${fmt(stats.paid_amount)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Sisa Piutang</h3>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Piutang Overdue</h3>
+          <div class="stat-value">${stats.overdue_count}</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Pelanggan dengan Tunggakan Terbesar</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Pelanggan</th>
+                <th>Total Tunggakan</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${topDebtors.map(d => `
+                <tr>
+                  <td><strong>${d.name}</strong></td>
+                  <td>${fmt(d.total_remaining)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderUsers() {
+  const users = getQuery('SELECT * FROM users ORDER BY id');
+  
+  return `
+    <div class="container">
+      <h1 class="page-title">Manajemen Pengguna</h1>
+      
+      <div class="form-section">
+        <h2>Tambah Pengguna Baru</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama</label>
+            <input type="text" id="userName" placeholder="Nama lengkap">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="userEmail" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="userPassword" placeholder="Password">
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select id="userRole">
+              <option value="sales">Staf Penjualan</option>
+              <option value="finance">Staf Keuangan</option>
+              <option value="manager">Manajer Keuangan</option>
+              <option value="owner">Pemilik Perusahaan</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addUser()">Simpan Pengguna</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Daftar Pengguna</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.map(u => `
+                <tr>
+                  <td><strong>${u.name}</strong></td>
+                  <td>${u.email}</td>
+                  <td>${u.role}</td>
+                  <td><span class="badge badge-success">${u.status}</span></td>
+                  <td><button class="btn btn-danger btn-small" onclick="deleteUser(${u.id})">Hapus</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCustomers() {
+  const customers = getQuery('SELECT * FROM customers ORDER BY id DESC');
+  
+  return `
+    <div class="container">
+      <h1 class="page-title">Data Pelanggan</h1>
+      
+      <div class="form-section">
+        <h2>Tambah Pelanggan Baru</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama Pelanggan</label>
+            <input type="text" id="customerName" placeholder="Nama perusahaan/pelanggan">
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="customerEmail" placeholder="email@example.com">
+          </div>
+          <div class="form-group">
+            <label>Telepon</label>
+            <input type="tel" id="customerPhone" placeholder="08xxxxxxxxxx">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Alamat</label>
+            <textarea id="customerAddress" placeholder="Alamat lengkap" rows="3"></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addCustomer()">Simpan Pelanggan</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Daftar Pelanggan (${customers.length})</h2>
+        <div class="button-group">
+          <button class="btn btn-success btn-small" onclick="exportCustomers()">📥 Download CSV</button>
+          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('customers')">📤 Upload CSV</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>Email</th>
+                <th>Telepon</th>
+                <th>Alamat</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${customers.map(c => `
+                <tr>
+                  <td><strong>${c.name}</strong></td>
+                  <td>${c.email || '-'}</td>
+                  <td>${c.phone || '-'}</td>
+                  <td>${c.address || '-'}</td>
+                  <td><button class="btn btn-danger btn-small" onclick="deleteCustomer(${c.id})">Hapus</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderInvoices() {
+  const invoices = getQuery(`
+    SELECT i.*, c.name as customer_name 
+    FROM invoices i 
+    JOIN customers c ON i.customer_id = c.id 
+    ORDER BY i.created_at DESC
+  `);
+  const customers = getQuery('SELECT * FROM customers');
+
+  return `
+    <div class="container">
+      <h1 class="page-title">Data Piutang</h1>
+      
+      <div class="form-section">
+        <h2>Tambah Faktur Piutang</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Pelanggan</label>
+            <select id="invoiceCustomer">
+              <option value="">-- Pilih Pelanggan --</option>
+              ${customers.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nomor Faktur</label>
+            <input type="text" id="invoiceNo" placeholder="INV-2026-001">
+          </div>
+          <div class="form-group">
+            <label>Nominal Piutang</label>
+            <input type="number" id="invoiceAmount" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>Jatuh Tempo</label>
+            <input type="date" id="invoiceDueDate" value="${today()}">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addInvoice()">Simpan Faktur</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Daftar Piutang (${invoices.length})</h2>
+        <div class="button-group">
+          <button class="btn btn-success btn-small" onclick="exportInvoices()">📥 Download CSV</button>
+          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('invoices')">📤 Upload CSV</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Faktur</th>
+                <th>Pelanggan</th>
+                <th>Nominal</th>
+                <th>Sisa</th>
+                <th>Jatuh Tempo</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoices.map(inv => `
+                <tr>
+                  <td><strong>${inv.invoice_no}</strong></td>
+                  <td>${inv.customer_name}</td>
+                  <td>${fmt(inv.amount)}</td>
+                  <td>${fmt(inv.remaining_amount || inv.amount)}</td>
+                  <td>${inv.due_date}</td>
+                  <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
+                  <td><button class="btn btn-danger btn-small" onclick="deleteInvoice(${inv.id})">Hapus</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPayments() {
+  const payments = getQuery(`
+    SELECT p.*, i.invoice_no, i.amount as invoice_amount, c.name as customer_name 
+    FROM payments p 
+    JOIN invoices i ON p.invoice_id = i.id 
+    JOIN customers c ON i.customer_id = c.id 
+    ORDER BY p.created_at DESC
+  `);
+  const invoices = getQuery(`
+    SELECT i.*, c.name as customer_name
+    FROM invoices i 
+    JOIN customers c ON i.customer_id = c.id
+    WHERE i.status != 'paid' 
+    ORDER BY i.invoice_no
+  `);
+
+  return `
+    <div class="container">
+      <h1 class="page-title">Pencatatan Pembayaran</h1>
+      
+      <div class="form-section">
+        <h2>Catat Pembayaran Baru</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Faktur</label>
+            <select id="paymentInvoice" onchange="updateInvoiceInfo()">
+              <option value="">-- Pilih Faktur --</option>
+              ${invoices.map(i => `<option value="${i.id}" data-amount="${i.remaining_amount || i.amount}">${i.invoice_no} - ${i.customer_name}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nominal Pembayaran</label>
+            <input type="number" id="paymentAmount" placeholder="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>Tanggal Pembayaran</label>
+            <input type="date" id="paymentDate" value="${today()}">
+          </div>
+          <div class="form-group">
+            <label>Metode Pembayaran</label>
+            <select id="paymentMethod">
+              <option>Transfer Bank</option>
+              <option>Tunai</option>
+              <option>Cek</option>
+              <option>Giro</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addPayment()">Simpan Pembayaran</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Riwayat Pembayaran (${payments.length})</h2>
+        <div class="button-group">
+          <button class="btn btn-success btn-small" onclick="exportPayments()">📥 Download CSV</button>
+          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('payments')">📤 Upload CSV</button>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Faktur</th>
+                <th>Pelanggan</th>
+                <th>Nominal</th>
+                <th>Tanggal</th>
+                <th>Metode</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${payments.map(p => `
+                <tr>
+                  <td><strong>${p.invoice_no}</strong></td>
+                  <td>${p.customer_name}</td>
+                  <td>${fmt(p.amount)}</td>
+                  <td>${p.payment_date}</td>
+                  <td>${p.method}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderReports() {
+  const invoices = getQuery(`
+    SELECT i.*, c.name as customer_name 
+    FROM invoices i 
+    JOIN customers c ON i.customer_id = c.id 
+    ORDER BY i.created_at DESC
+  `);
+
+  const stats = getQuery(`
+    SELECT 
+      (SELECT COUNT(*) FROM invoices WHERE status='paid') as paid_count,
+      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' OR status='partial') as unpaid_count,
+      (SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status='paid') as paid_amount,
+      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices WHERE status != 'paid') as remaining_amount
+  `)[0];
+
+  return `
+    <div class="container">
+      <h1 class="page-title">Laporan Piutang</h1>
+      
+      <div class="form-section">
+        <h2>Filter Laporan</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Awal Periode</label>
+            <input type="date" id="reportStartDate" value="2026-01-01">
+          </div>
+          <div class="form-group">
+            <label>Akhir Periode</label>
+            <input type="date" id="reportEndDate" value="${today()}">
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select id="reportStatus">
+              <option value="">Semua</option>
+              <option value="paid">Lunas</option>
+              <option value="unpaid">Belum Lunas</option>
+              <option value="partial">Sebagian Lunas</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="generateReport()">Tampilkan Laporan</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Ringkasan Laporan</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <h3>Piutang Lunas</h3>
+            <div class="stat-value">${stats.paid_count}</div>
+            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.paid_amount)}</div>
+          </div>
+          <div class="stat-card">
+            <h3>Piutang Belum Lunas</h3>
+            <div class="stat-value">${stats.unpaid_count}</div>
+            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.remaining_amount)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Detail Piutang</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Faktur</th>
+                <th>Pelanggan</th>
+                <th>Nominal</th>
+                <th>Sisa</th>
+                <th>Jatuh Tempo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoices.map(inv => `
+                <tr>
+                  <td><strong>${inv.invoice_no}</strong></td>
+                  <td>${inv.customer_name}</td>
+                  <td>${fmt(inv.amount)}</td>
+                  <td>${fmt(inv.remaining_amount || inv.amount)}</td>
+                  <td>${inv.due_date}</td>
+                  <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderImportExport() {
+  return `
+    <div class="container">
+      <h1 class="page-title">Import/Export Data</h1>
+      
+      <div class="form-section">
+        <h2>📥 Export (Download)</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:15px">Unduh data dalam format CSV untuk backup atau analisis</p>
+        <div class="button-group">
+          <button class="btn btn-success" onclick="exportCustomers()">📥 Pelanggan</button>
+          <button class="btn btn-success" onclick="exportInvoices()">📥 Piutang</button>
+          <button class="btn btn-success" onclick="exportPayments()">📥 Pembayaran</button>
+          <button class="btn btn-success" onclick="exportAll()">📥 Semua Data</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>📤 Import (Upload)</h2>
+        <p style="font-size:13px;color:#666;margin-bottom:15px">Upload file CSV untuk menambah data (format: name, email, phone, address untuk pelanggan)</p>
+        <div class="button-group">
+          <button class="btn btn-secondary" onclick="triggerFileUpload('customers')">📤 Upload Pelanggan</button>
+          <button class="btn btn-secondary" onclick="triggerFileUpload('invoices')">📤 Upload Piutang</button>
+          <button class="btn btn-secondary" onclick="triggerFileUpload('payments')">📤 Upload Pembayaran</button>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Format CSV</h2>
+        <div style="background:#f3f4f6;padding:15px;border-radius:8px;font-size:12px;font-family:monospace;overflow-x:auto">
+          <strong>Pelanggan:</strong><br>
+          name,email,phone,address<br>
+          PT Maju,info@maju.com,081234567,Jakarta<br><br>
+          
+          <strong>Piutang:</strong><br>
+          invoice_no,customer_id,amount,due_date,status<br>
+          INV-001,1,5000000,2026-07-20,unpaid<br><br>
+          
+          <strong>Pembayaran:</strong><br>
+          invoice_id,amount,payment_date,method,notes<br>
+          1,2000000,2026-07-10,Transfer,DP awal
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderSettings() {
+  return `
+    <div class="container">
+      <h1 class="page-title">Pengaturan</h1>
+      
+      <div class="form-section">
+        <h2>Profil Pengguna</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nama</label>
+            <input type="text" value="${currentUser.name}" disabled>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" value="${currentUser.email}" disabled>
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <input type="text" value="${currentUser.role}" disabled>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h2>Ubah Password</h2>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Password Baru</label>
+            <input type="password" id="newPassword" placeholder="Masukkan password baru">
+          </div>
+          <div class="form-group">
+            <label>Konfirmasi Password</label>
+            <input type="password" id="confirmPassword" placeholder="Konfirmasi password">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="changePassword()">Simpan Password Baru</button>
+      </div>
+
+      <div class="form-section">
+        <h2>Tentang Aplikasi</h2>
+        <p><strong>PiutangKu v2.0</strong></p>
+        <p style="font-size:12px;color:#666">Sistem Manajemen Piutang Local-First dengan Import/Export</p>
+        <p style="font-size:12px;color:#666">Data disimpan secara lokal di perangkat Anda menggunakan IndexedDB</p>
+      </div>
+    </div>
+  `;
+}
+
+// ============ CRUD FUNCTIONS ============
+function addUser() {
+  const name = document.getElementById('userName')?.value || '';
+  const email = document.getElementById('userEmail')?.value || '';
+  const password = document.getElementById('userPassword')?.value || '';
+  const role = document.getElementById('userRole')?.value || 'sales';
+
+  if (!name || !email || !password) {
+    toast('Semua field harus diisi', 'error');
+    return;
+  }
+
+  if (execSQL('INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)', [name, email, password, role, 'active'])) {
+    toast('Pengguna berhasil ditambahkan', 'success');
+    document.getElementById('userName').value = '';
+    document.getElementById('userEmail').value = '';
+    document.getElementById('userPassword').value = '';
+    render();
+  }
+}
+
+function deleteUser(id) {
+  if (!confirm('Yakin ingin menghapus pengguna ini?')) return;
+  if (execSQL('DELETE FROM users WHERE id = ?', [id])) {
+    toast('Pengguna dihapus', 'success');
+    render();
+  }
+}
+
+function addCustomer() {
+  const name = document.getElementById('customerName')?.value || '';
+  const email = document.getElementById('customerEmail')?.value || '';
+  const phone = document.getElementById('customerPhone')?.value || '';
+  const address = document.getElementById('customerAddress')?.value || '';
+
+  if (!name) {
+    toast('Nama pelanggan harus diisi', 'error');
+    return;
+  }
+
+  if (execSQL('INSERT INTO customers (name, email, phone, address) VALUES (?, ?, ?, ?)', [name, email, phone, address])) {
+    toast('Pelanggan berhasil ditambahkan', 'success');
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerEmail').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('customerAddress').value = '';
+    render();
+  }
+}
+
+function deleteCustomer(id) {
+  if (!confirm('Yakin ingin menghapus pelanggan ini?')) return;
+  if (execSQL('DELETE FROM customers WHERE id = ?', [id])) {
+    toast('Pelanggan dihapus', 'success');
+    render();
+  }
+}
+
+function addInvoice() {
+  const customerId = document.getElementById('invoiceCustomer')?.value || '';
+  const invoiceNo = document.getElementById('invoiceNo')?.value || '';
+  const amount = parseFloat(document.getElementById('invoiceAmount')?.value || 0);
+  const dueDate = document.getElementById('invoiceDueDate')?.value || '';
+
+  if (!customerId || !invoiceNo || amount <= 0 || !dueDate) {
+    toast('Semua field harus diisi dengan benar', 'error');
+    return;
+  }
+
+  if (execSQL('INSERT INTO invoices (customer_id, invoice_no, amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)', 
+    [customerId, invoiceNo, amount, amount, dueDate, 'unpaid'])) {
+    toast('Faktur berhasil ditambahkan', 'success');
+    document.getElementById('invoiceCustomer').value = '';
+    document.getElementById('invoiceNo').value = '';
+    document.getElementById('invoiceAmount').value = '';
+    render();
+  }
+}
+
+function deleteInvoice(id) {
+  if (!confirm('Yakin ingin menghapus faktur ini?')) return;
+  if (execSQL('DELETE FROM invoices WHERE id = ?', [id])) {
+    toast('Faktur dihapus', 'success');
+    render();
+  }
+}
+
+function addPayment() {
+  const invoiceId = document.getElementById('paymentInvoice')?.value || '';
+  const amount = parseFloat(document.getElementById('paymentAmount')?.value || 0);
+  const paymentDate = document.getElementById('paymentDate')?.value || '';
+  const method = document.getElementById('paymentMethod')?.value || '';
+
+  if (!invoiceId || amount <= 0 || !paymentDate) {
+    toast('Semua field harus diisi dengan benar', 'error');
+    return;
+  }
+
+  if (execSQL('INSERT INTO payments (invoice_id, amount, payment_date, method) VALUES (?, ?, ?, ?)', [invoiceId, amount, paymentDate, method])) {
+    const invoice = getQuery('SELECT * FROM invoices WHERE id = ?', [invoiceId])[0];
+    if (invoice) {
+      const totalPaid = invoice.paid_amount + amount;
+      let status = 'unpaid';
+      if (totalPaid >= invoice.amount) {
+        status = 'paid';
+      } else if (totalPaid > 0) {
+        status = 'partial';
+      }
+      execSQL('UPDATE invoices SET paid_amount = ?, remaining_amount = ?, status = ? WHERE id = ?', 
+        [totalPaid, invoice.amount - totalPaid, status, invoiceId]);
+    }
+    toast('Pembayaran berhasil dicatat', 'success');
+    document.getElementById('paymentInvoice').value = '';
+    document.getElementById('paymentAmount').value = '';
+    render();
+  }
+}
+
+function generateReport() {
+  toast('Laporan ditampilkan di bawah', 'success');
+}
+
+function changePassword() {
+  const newPass = document.getElementById('newPassword')?.value || '';
+  const confirmPass = document.getElementById('confirmPassword')?.value || '';
+
+  if (!newPass) {
+    toast('Password baru harus diisi', 'error');
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    toast('Password tidak cocok', 'error');
+    return;
+  }
+
+  if (execSQL('UPDATE users SET password = ? WHERE id = ?', [newPass, currentUser.id])) {
+    toast('Password berhasil diubah', 'success');
+    currentUser.password = newPass;
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  }
+}
+
+// ============ EXPORT FUNCTIONS ============
+function exportCustomers() {
+  const data = getQuery('SELECT id, name, email, phone, address, created_at FROM customers ORDER BY id DESC');
+  downloadCSV(data, `pelanggan_${today()}.csv`);
+}
+
+function exportInvoices() {
+  const data = getQuery('SELECT id, invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status, created_at FROM invoices ORDER BY id DESC');
+  downloadCSV(data, `piutang_${today()}.csv`);
+}
+
+function exportPayments() {
+  const data = getQuery('SELECT id, invoice_id, amount, payment_date, method, created_at FROM payments ORDER BY id DESC');
+  downloadCSV(data, `pembayaran_${today()}.csv`);
+}
+
+function exportAll() {
+  const customers = getQuery('SELECT id, name, email, phone, address, created_at FROM customers');
+  const invoices = getQuery('SELECT id, invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status, created_at FROM invoices');
+  const payments = getQuery('SELECT id, invoice_id, amount, payment_date, method, created_at FROM payments');
+  
+  const timestamp = today();
+  downloadCSV(customers, `piutangku_pelanggan_${timestamp}.csv`);
+  setTimeout(() => downloadCSV(invoices, `piutangku_piutang_${timestamp}.csv`), 500);
+  setTimeout(() => downloadCSV(payments, `piutangku_pembayaran_${timestamp}.csv`), 1000);
+}
+
+// ============ IMPORT FUNCTIONS ============
+function triggerFileUpload(type) {
+  const input = document.getElementById('fileInput');
+  input.dataset.type = type;
+  input.click();
+}
+
+document.getElementById('fileInput')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  const type = e.target.dataset.type;
+  if (!file) return;
+  
+  if (type === 'customers') uploadCustomersFromCSV(file);
+  else if (type === 'invoices') uploadInvoicesFromCSV(file);
+  else if (type === 'payments') uploadPaymentsFromCSV(file);
+  
+  e.target.value = '';
+});
+
+// ============ NAVIGATION ============
+function goToPage(page) {
+  currentPage = page;
+  render();
+}
+
+function handleLogin() {
+  const email = document.getElementById('loginEmail')?.value || '';
+  const password = document.getElementById('loginPassword')?.value || '';
+  login(email, password);
+}
+
+function updateInvoiceInfo() {
+  const select = document.getElementById('paymentInvoice');
+  if (select && select.selectedOptions[0]) {
+    const amount = select.selectedOptions[0].getAttribute('data-amount');
+    document.getElementById('paymentAmount').placeholder = `Maks: ${fmt(amount)}`;
+  }
+}
+
+// ============ MAIN RENDER ============
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = !currentUser ? renderLogin() : renderApp();
+}
+
+// ============ BOOT ============
+async function boot() {
+  try {
+    SQL = await initSqlJs({
+      locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
+    });
+
+    let savedDB = await loadDB();
+    if (savedDB) {
+      db = new SQL.Database(new Uint8Array(savedDB));
+    } else {
+      db = new SQL.Database();
+      createSchema();
+      seedData();
+      await saveDB();
+    }
+
+    render();
+  } catch (error) {
+    console.error('Boot error:', error);
+    document.getElementById('app').innerHTML = '<div style="padding:20px;color:red">Error: ' + error.message + '</div>';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
