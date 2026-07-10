@@ -14,7 +14,7 @@
 html,body{height:100%}
 body{font-family:'Inter',sans-serif;background:#f8f9fa;color:#333}
 .app-wrapper{display:flex;height:100vh;flex-direction:column}
-.header{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100}
+.header{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
 .header-left{display:flex;gap:20px;align-items:center}
 .logo{font-size:24px;font-weight:800}
 .user-info{font-size:12px;opacity:0.9}
@@ -66,10 +66,13 @@ tr:hover{background:#f9fafb}
 .alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
 .alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
 .alert-warning{background:#fef3c7;border:1px solid #fde68a;color:#92400e}
+.upload-area{border:2px dashed #d1d5db;border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.3s}
+.upload-area:hover{border-color:#2563eb;background:#f0f7ff}
+.upload-area.dragover{border-color:#2563eb;background:#f0f7ff}
 .hidden{display:none!important}
 .empty-state{text-align:center;padding:40px 20px;color:#999}
 @media print{body{background:white}.sidebar,.header{display:none}.content{padding:0}table{box-shadow:none}}
-@media(max-width:768px){.sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e5e7eb;overflow-x:auto;overflow-y:visible}.sidebar-menu{display:flex;gap:0;padding:0;flex-wrap:wrap}.sidebar-menu a{padding:10px 15px;border-left:none;border-bottom:3px solid transparent}.sidebar-menu a.active{border-bottom-color:#2563eb;background:transparent}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.main-container{flex-direction:column}.content{padding:15px}}
+@media(max-width:768px){.sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e5e7eb;overflow-x:auto;overflow-y:visible}.sidebar-menu{display:flex;gap:0;padding:0;flex-wrap:wrap}.sidebar-menu a{flex:1;min-width:100px;border-left:none;border-bottom:3px solid transparent;padding:10px 5px;text-align:center}.sidebar-menu a.active{border-bottom-color:#2563eb}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.main-container{flex-direction:column}}
 </style>
 </head>
 <body>
@@ -432,6 +435,17 @@ function logout() {
   render();
 }
 
+function handleLogin() {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  login(email, password);
+}
+
+function goToPage(page) {
+  currentPage = page;
+  render();
+}
+
 // ============ PAGE RENDERS ============
 function renderLogin() {
   return `
@@ -498,7 +512,7 @@ function renderApp() {
           <div class="logo">🏦 PiutangKu</div>
           <div class="user-info">
             <strong>${currentUser.name || 'User'}</strong><br>
-            ${roleLabels[currentUser.role] || 'Staff'}
+            ${roleLabels[currentUser.role] || currentUser.role}
           </div>
         </div>
         <button class="btn btn-secondary btn-small" onclick="logout()">Logout</button>
@@ -508,7 +522,7 @@ function renderApp() {
         <div class="sidebar">
           <div class="sidebar-menu">
             ${menus.map(m => `
-              <a onclick="goToPage('${m}');return false" class="sidebar-menu-item ${currentPage === m ? 'active' : ''}">
+              <a href="#" onclick="goToPage('${m}');return false" class="${currentPage === m ? 'active' : ''}">
                 <span>${menuLabels[m]}</span>
               </a>
             `).join('')}
@@ -526,13 +540,13 @@ function renderApp() {
 function renderDashboard() {
   const stats = getQuery(`
     SELECT 
-      COALESCE((SELECT COUNT(*) FROM customers), 0) as total_customers,
-      COALESCE((SELECT COUNT(*) FROM invoices), 0) as total_invoices,
-      COALESCE((SELECT SUM(amount) FROM invoices), 0) as total_amount,
-      COALESCE((SELECT SUM(remaining_amount) FROM invoices), 0) as remaining_amount,
-      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')), 0) as overdue_count,
-      COALESCE((SELECT SUM(amount) FROM payments), 0) as paid_amount
-  `)[0] || {};
+      (SELECT COUNT(*) FROM customers) as total_customers,
+      (SELECT COUNT(*) FROM invoices) as total_invoices,
+      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
+      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
+      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount
+  `)[0];
 
   const recentInvoices = getQuery(`
     SELECT i.*, c.name as customer_name 
@@ -549,25 +563,24 @@ function renderDashboard() {
       <div class="stats-grid">
         <div class="stat-card primary">
           <h3>Total Piutang</h3>
-          <div class="stat-value">${fmt(stats.total_amount || 0)}</div>
+          <div class="stat-value">${fmt(stats.total_amount)}</div>
         </div>
         <div class="stat-card">
           <h3>Sisa Piutang</h3>
-          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount || 0)}</div>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
         </div>
         <div class="stat-card">
           <h3>Total Pelanggan</h3>
-          <div class="stat-value">${stats.total_customers || 0}</div>
+          <div class="stat-value">${stats.total_customers}</div>
         </div>
         <div class="stat-card">
           <h3>Piutang Jatuh Tempo</h3>
-          <div class="stat-value">${stats.overdue_count || 0}</div>
+          <div class="stat-value">${stats.overdue_count}</div>
         </div>
       </div>
 
       <div class="form-section">
         <h2>Transaksi Terbaru</h2>
-        ${recentInvoices.length === 0 ? '<div class="empty-state">Belum ada transaksi</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -580,7 +593,7 @@ function renderDashboard() {
               </tr>
             </thead>
             <tbody>
-              ${recentInvoices.map(inv => `
+              ${recentInvoices.length > 0 ? recentInvoices.map(inv => `
                 <tr>
                   <td><strong>${inv.invoice_no}</strong></td>
                   <td>${inv.customer_name}</td>
@@ -588,11 +601,10 @@ function renderDashboard() {
                   <td>${inv.due_date}</td>
                   <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="5" style="text-align:center;color:#999">Tidak ada data</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -601,15 +613,15 @@ function renderDashboard() {
 function renderExecutiveDashboard() {
   const stats = getQuery(`
     SELECT 
-      COALESCE((SELECT SUM(amount) FROM invoices), 0) as total_amount,
-      COALESCE((SELECT SUM(remaining_amount) FROM invoices), 0) as remaining_amount,
-      COALESCE((SELECT SUM(amount) FROM payments), 0) as paid_amount,
-      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')), 0) as overdue_count,
-      COALESCE((SELECT COUNT(*) FROM customers), 0) as total_customers
-  `)[0] || {};
+      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
+      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
+      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount,
+      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
+      (SELECT COUNT(*) FROM customers) as total_customers
+  `)[0];
 
   const topDebtors = getQuery(`
-    SELECT c.name, COALESCE(SUM(i.remaining_amount), 0) as total_remaining
+    SELECT c.name, SUM(i.remaining_amount) as total_remaining
     FROM invoices i
     JOIN customers c ON i.customer_id = c.id
     WHERE i.status != 'paid'
@@ -625,25 +637,24 @@ function renderExecutiveDashboard() {
       <div class="stats-grid">
         <div class="stat-card primary">
           <h3>Total Piutang</h3>
-          <div class="stat-value">${fmt(stats.total_amount || 0)}</div>
+          <div class="stat-value">${fmt(stats.total_amount)}</div>
         </div>
         <div class="stat-card">
           <h3>Total Pembayaran</h3>
-          <div class="stat-value" style="color:#10b981">${fmt(stats.paid_amount || 0)}</div>
+          <div class="stat-value" style="color:#10b981">${fmt(stats.paid_amount)}</div>
         </div>
         <div class="stat-card">
           <h3>Sisa Piutang</h3>
-          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount || 0)}</div>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
         </div>
         <div class="stat-card">
           <h3>Piutang Overdue</h3>
-          <div class="stat-value">${stats.overdue_count || 0}</div>
+          <div class="stat-value">${stats.overdue_count}</div>
         </div>
       </div>
 
       <div class="form-section">
         <h2>Pelanggan dengan Tunggakan Terbesar</h2>
-        ${topDebtors.length === 0 ? '<div class="empty-state">Semua pelanggan lunas</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -653,16 +664,15 @@ function renderExecutiveDashboard() {
               </tr>
             </thead>
             <tbody>
-              ${topDebtors.map(d => `
+              ${topDebtors.length > 0 ? topDebtors.map(d => `
                 <tr>
                   <td><strong>${d.name}</strong></td>
                   <td>${fmt(d.total_remaining)}</td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="2" style="text-align:center;color:#999">Tidak ada data</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -705,8 +715,7 @@ function renderUsers() {
       </div>
 
       <div class="form-section">
-        <h2>Daftar Pengguna (${users.length})</h2>
-        ${users.length === 0 ? '<div class="empty-state">Tidak ada pengguna</div>' : `
+        <h2>Daftar Pengguna</h2>
         <div class="table-wrapper">
           <table>
             <thead>
@@ -719,7 +728,7 @@ function renderUsers() {
               </tr>
             </thead>
             <tbody>
-              ${users.map(u => `
+              ${users.length > 0 ? users.map(u => `
                 <tr>
                   <td><strong>${u.name}</strong></td>
                   <td>${u.email}</td>
@@ -727,11 +736,10 @@ function renderUsers() {
                   <td><span class="badge badge-success">${u.status}</span></td>
                   <td><button class="btn btn-danger btn-small" onclick="deleteUser(${u.id})">Hapus</button></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="5" style="text-align:center;color:#999">Tidak ada pengguna</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -769,12 +777,7 @@ function renderCustomers() {
 
       <div class="form-section">
         <h2>Daftar Pelanggan (${customers.length})</h2>
-        <div class="button-group">
-          <button class="btn btn-success btn-small" onclick="exportCustomers()">📥 Download CSV</button>
-          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('customers')">📤 Upload CSV</button>
-        </div>
-        ${customers.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada pelanggan</div>' : `
-        <div class="table-wrapper" style="margin-top:15px">
+        <div class="table-wrapper">
           <table>
             <thead>
               <tr>
@@ -786,7 +789,7 @@ function renderCustomers() {
               </tr>
             </thead>
             <tbody>
-              ${customers.map(c => `
+              ${customers.length > 0 ? customers.map(c => `
                 <tr>
                   <td><strong>${c.name}</strong></td>
                   <td>${c.email || '-'}</td>
@@ -794,11 +797,10 @@ function renderCustomers() {
                   <td>${c.address || '-'}</td>
                   <td><button class="btn btn-danger btn-small" onclick="deleteCustomer(${c.id})">Hapus</button></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="5" style="text-align:center;color:#999">Tidak ada pelanggan</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -832,11 +834,11 @@ function renderInvoices() {
             <input type="text" id="invoiceNo" placeholder="INV-2026-001">
           </div>
           <div class="form-group">
-            <label>Nominal Piutang</label>
-            <input type="number" id="invoiceAmount" placeholder="0" min="0">
+            <label>Jumlah</label>
+            <input type="number" id="invoiceAmount" placeholder="1000000">
           </div>
           <div class="form-group">
-            <label>Jatuh Tempo</label>
+            <label>Tanggal Jatuh Tempo</label>
             <input type="date" id="invoiceDueDate" value="${today()}">
           </div>
         </div>
@@ -844,19 +846,18 @@ function renderInvoices() {
       </div>
 
       <div class="form-section">
-        <h2>Daftar Piutang (${invoices.length})</h2>
+        <h2>Daftar Piutang</h2>
         <div class="button-group">
-          <button class="btn btn-success btn-small" onclick="exportInvoices()">📥 Download CSV</button>
-          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('invoices')">📤 Upload CSV</button>
+          <button class="btn btn-secondary btn-small" onclick="downloadCSV(getQuery('SELECT i.*, c.name as customer_name FROM invoices i JOIN customers c ON i.customer_id = c.id'), 'piutang.csv')">📥 Export CSV</button>
         </div>
-        ${invoices.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada piutang</div>' : `
-        <div class="table-wrapper" style="margin-top:15px">
+        <div class="table-wrapper">
           <table>
             <thead>
               <tr>
                 <th>Faktur</th>
                 <th>Pelanggan</th>
-                <th>Nominal</th>
+                <th>Jumlah</th>
+                <th>Terbayar</th>
                 <th>Sisa</th>
                 <th>Jatuh Tempo</th>
                 <th>Status</th>
@@ -864,21 +865,21 @@ function renderInvoices() {
               </tr>
             </thead>
             <tbody>
-              ${invoices.map(inv => `
+              ${invoices.length > 0 ? invoices.map(inv => `
                 <tr>
                   <td><strong>${inv.invoice_no}</strong></td>
                   <td>${inv.customer_name}</td>
                   <td>${fmt(inv.amount)}</td>
-                  <td>${fmt(inv.remaining_amount || inv.amount)}</td>
+                  <td>${fmt(inv.paid_amount)}</td>
+                  <td>${fmt(inv.remaining_amount)}</td>
                   <td>${inv.due_date}</td>
                   <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
                   <td><button class="btn btn-danger btn-small" onclick="deleteInvoice(${inv.id})">Hapus</button></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="8" style="text-align:center;color:#999">Tidak ada faktur</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -886,37 +887,37 @@ function renderInvoices() {
 
 function renderPayments() {
   const payments = getQuery(`
-    SELECT p.*, i.invoice_no, i.amount as invoice_amount, c.name as customer_name 
-    FROM payments p 
-    JOIN invoices i ON p.invoice_id = i.id 
-    JOIN customers c ON i.customer_id = c.id 
+    SELECT p.*, i.invoice_no, c.name as customer_name 
+    FROM payments p
+    JOIN invoices i ON p.invoice_id = i.id
+    JOIN customers c ON i.customer_id = c.id
     ORDER BY p.created_at DESC
   `);
   const invoices = getQuery(`
-    SELECT i.*, c.name as customer_name
-    FROM invoices i 
+    SELECT i.id, i.invoice_no, c.name as customer_name, i.remaining_amount
+    FROM invoices i
     JOIN customers c ON i.customer_id = c.id
-    WHERE i.status != 'paid' 
+    WHERE i.status != 'paid'
     ORDER BY i.invoice_no
   `);
 
   return `
     <div class="container">
-      <h1 class="page-title">Pencatatan Pembayaran</h1>
+      <h1 class="page-title">Data Pembayaran</h1>
       
       <div class="form-section">
-        <h2>Catat Pembayaran Baru</h2>
+        <h2>Tambah Pembayaran</h2>
         <div class="form-grid">
           <div class="form-group">
             <label>Faktur</label>
-            <select id="paymentInvoice" onchange="updateInvoiceInfo()">
+            <select id="paymentInvoice">
               <option value="">-- Pilih Faktur --</option>
-              ${invoices.map(i => `<option value="${i.id}" data-amount="${i.remaining_amount || i.amount}">${i.invoice_no} - ${i.customer_name}</option>`).join('')}
+              ${invoices.map(i => `<option value="${i.id}">INV-${i.id} - ${i.customer_name} (${fmt(i.remaining_amount)})</option>`).join('')}
             </select>
           </div>
           <div class="form-group">
-            <label>Nominal Pembayaran</label>
-            <input type="number" id="paymentAmount" placeholder="0" min="0">
+            <label>Jumlah Pembayaran</label>
+            <input type="number" id="paymentAmount" placeholder="500000">
           </div>
           <div class="form-group">
             <label>Tanggal Pembayaran</label>
@@ -925,48 +926,51 @@ function renderPayments() {
           <div class="form-group">
             <label>Metode Pembayaran</label>
             <select id="paymentMethod">
-              <option>Transfer Bank</option>
-              <option>Tunai</option>
-              <option>Cek</option>
-              <option>Giro</option>
+              <option value="Transfer">Transfer Bank</option>
+              <option value="Tunai">Tunai</option>
+              <option value="Cek">Cek</option>
+              <option value="Kartu Kredit">Kartu Kredit</option>
             </select>
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Catatan</label>
+            <textarea id="paymentNotes" placeholder="Catatan pembayaran" rows="2"></textarea>
           </div>
         </div>
         <button class="btn btn-primary" onclick="addPayment()">Simpan Pembayaran</button>
       </div>
 
       <div class="form-section">
-        <h2>Riwayat Pembayaran (${payments.length})</h2>
+        <h2>Riwayat Pembayaran</h2>
         <div class="button-group">
-          <button class="btn btn-success btn-small" onclick="exportPayments()">📥 Download CSV</button>
-          <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('payments')">📤 Upload CSV</button>
+          <button class="btn btn-secondary btn-small" onclick="downloadCSV(getQuery('SELECT p.*, i.invoice_no, c.name as customer_name FROM payments p JOIN invoices i ON p.invoice_id = i.id JOIN customers c ON i.customer_id = c.id'), 'pembayaran.csv')">📥 Export CSV</button>
         </div>
-        ${payments.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada pembayaran</div>' : `
-        <div class="table-wrapper" style="margin-top:15px">
+        <div class="table-wrapper">
           <table>
             <thead>
               <tr>
                 <th>Faktur</th>
                 <th>Pelanggan</th>
-                <th>Nominal</th>
-                <th>Tanggal</th>
+                <th>Jumlah</th>
                 <th>Metode</th>
+                <th>Tanggal</th>
+                <th>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              ${payments.map(p => `
+              ${payments.length > 0 ? payments.map(p => `
                 <tr>
                   <td><strong>${p.invoice_no}</strong></td>
                   <td>${p.customer_name}</td>
                   <td>${fmt(p.amount)}</td>
-                  <td>${p.payment_date}</td>
                   <td>${p.method}</td>
+                  <td>${p.payment_date}</td>
+                  <td><button class="btn btn-danger btn-small" onclick="deletePayment(${p.id})">Hapus</button></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="6" style="text-align:center;color:#999">Tidak ada pembayaran</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -980,88 +984,63 @@ function renderReports() {
     ORDER BY i.created_at DESC
   `);
 
-  const stats = getQuery(`
-    SELECT 
-      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='paid'), 0) as paid_count,
-      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' OR status='partial'), 0) as unpaid_count,
-      COALESCE((SELECT SUM(amount) FROM invoices WHERE status='paid'), 0) as paid_amount,
-      COALESCE((SELECT SUM(remaining_amount) FROM invoices WHERE status != 'paid'), 0) as remaining_amount
-  `)[0] || {};
+  const totalAmount = getQuery('SELECT COALESCE(SUM(amount), 0) as total FROM invoices')[0].total;
+  const totalPaid = getQuery('SELECT COALESCE(SUM(amount), 0) as total FROM payments')[0].total;
+  const totalRemaining = getQuery('SELECT COALESCE(SUM(remaining_amount), 0) as total FROM invoices')[0].total;
 
   return `
     <div class="container">
       <h1 class="page-title">Laporan Piutang</h1>
       
-      <div class="form-section">
-        <h2>Filter Laporan</h2>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Awal Periode</label>
-            <input type="date" id="reportStartDate" value="2026-01-01">
-          </div>
-          <div class="form-group">
-            <label>Akhir Periode</label>
-            <input type="date" id="reportEndDate" value="${today()}">
-          </div>
-          <div class="form-group">
-            <label>Status</label>
-            <select id="reportStatus">
-              <option value="">Semua</option>
-              <option value="paid">Lunas</option>
-              <option value="unpaid">Belum Lunas</option>
-              <option value="partial">Sebagian Lunas</option>
-            </select>
-          </div>
+      <div class="stats-grid">
+        <div class="stat-card primary">
+          <h3>Total Piutang</h3>
+          <div class="stat-value">${fmt(totalAmount)}</div>
         </div>
-        <button class="btn btn-primary" onclick="generateReport()">Tampilkan Laporan</button>
-      </div>
-
-      <div class="form-section">
-        <h2>Ringkasan Laporan</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <h3>Piutang Lunas</h3>
-            <div class="stat-value">${stats.paid_count || 0}</div>
-            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.paid_amount || 0)}</div>
-          </div>
-          <div class="stat-card">
-            <h3>Piutang Belum Lunas</h3>
-            <div class="stat-value">${stats.unpaid_count || 0}</div>
-            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.remaining_amount || 0)}</div>
-          </div>
+        <div class="stat-card">
+          <h3>Total Terbayar</h3>
+          <div class="stat-value" style="color:#10b981">${fmt(totalPaid)}</div>
+        </div>
+        <div class="stat-card">
+          <h3>Total Sisa Piutang</h3>
+          <div class="stat-value" style="color:#ef4444">${fmt(totalRemaining)}</div>
         </div>
       </div>
 
       <div class="form-section">
-        <h2>Detail Piutang</h2>
-        ${invoices.length === 0 ? '<div class="empty-state">Tidak ada piutang</div>' : `
+        <h2>Detail Piutang per Pelanggan</h2>
+        <div class="button-group">
+          <button class="btn btn-secondary btn-small" onclick="downloadCSV(getQuery('SELECT i.*, c.name as customer_name FROM invoices i JOIN customers c ON i.customer_id = c.id'), 'laporan-piutang.csv')">📥 Export CSV</button>
+          <button class="btn btn-success btn-small" onclick="window.print()">🖨️ Print</button>
+        </div>
         <div class="table-wrapper">
           <table>
             <thead>
               <tr>
                 <th>Faktur</th>
                 <th>Pelanggan</th>
-                <th>Nominal</th>
+                <th>Jumlah</th>
+                <th>Terbayar</th>
                 <th>Sisa</th>
                 <th>Jatuh Tempo</th>
                 <th>Status</th>
               </tr>
             </thead>
             <tbody>
-              ${invoices.map(inv => `
+              ${invoices.length > 0 ? invoices.map(inv => `
                 <tr>
                   <td><strong>${inv.invoice_no}</strong></td>
                   <td>${inv.customer_name}</td>
                   <td>${fmt(inv.amount)}</td>
-                  <td>${fmt(inv.remaining_amount || inv.amount)}</td>
+                  <td>${fmt(inv.paid_amount)}</td>
+                  <td>${fmt(inv.remaining_amount)}</td>
                   <td>${inv.due_date}</td>
                   <td><span class="badge ${inv.status === 'paid' ? 'badge-success' : inv.status === 'partial' ? 'badge-warning' : 'badge-danger'}">${inv.status.toUpperCase()}</span></td>
                 </tr>
-              `).join('')}
+              `).join('') : '<tr><td colspan="7" style="text-align:center;color:#999">Tidak ada data</td></tr>'}
             </tbody>
           </table>
         </div>
-        `}
       </div>
     </div>
   `;
@@ -1073,40 +1052,38 @@ function renderImportExport() {
       <h1 class="page-title">Import/Export Data</h1>
       
       <div class="form-section">
-        <h2>📥 Export (Download)</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:15px">Unduh data dalam format CSV untuk backup atau analisis</p>
+        <h2>📤 Export Data</h2>
+        <p style="color:#666;margin-bottom:15px">Download data Anda dalam format CSV untuk backup atau analisis lebih lanjut.</p>
         <div class="button-group">
-          <button class="btn btn-success" onclick="exportCustomers()">📥 Pelanggan</button>
-          <button class="btn btn-success" onclick="exportInvoices()">📥 Piutang</button>
-          <button class="btn btn-success" onclick="exportPayments()">📥 Pembayaran</button>
-          <button class="btn btn-success" onclick="exportAll()">📥 Semua Data</button>
+          <button class="btn btn-primary btn-small" onclick="downloadCSV(getQuery('SELECT * FROM customers'), 'pelanggan.csv')">📥 Export Pelanggan</button>
+          <button class="btn btn-primary btn-small" onclick="downloadCSV(getQuery('SELECT i.*, c.name as customer_name FROM invoices i JOIN customers c ON i.customer_id = c.id'), 'piutang.csv')">📥 Export Piutang</button>
+          <button class="btn btn-primary btn-small" onclick="downloadCSV(getQuery('SELECT p.*, i.invoice_no, c.name as customer_name FROM payments p JOIN invoices i ON p.invoice_id = i.id JOIN customers c ON i.customer_id = c.id'), 'pembayaran.csv')">📥 Export Pembayaran</button>
         </div>
       </div>
 
       <div class="form-section">
-        <h2>📤 Import (Upload)</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:15px">Upload file CSV untuk menambah data</p>
-        <div class="button-group">
-          <button class="btn btn-secondary" onclick="triggerFileUpload('customers')">📤 Upload Pelanggan</button>
-          <button class="btn btn-secondary" onclick="triggerFileUpload('invoices')">📤 Upload Piutang</button>
-          <button class="btn btn-secondary" onclick="triggerFileUpload('payments')">📤 Upload Pembayaran</button>
+        <h2>📥 Import Data</h2>
+        <p style="color:#666;margin-bottom:15px">Upload file CSV untuk mengimpor data besar sekaligus. Pastikan format CSV sesuai dengan template.</p>
+        
+        <div style="margin-bottom:20px">
+          <h3 style="font-size:14px;margin-bottom:10px">Impor Pelanggan</h3>
+          <div class="upload-area" onclick="document.getElementById('fileInput').onchange=function(e){uploadCustomersFromCSV(e.target.files[0])};document.getElementById('fileInput').click()">
+            <div style="font-size:13px;color:#666">Klik atau drag file CSV di sini<br><em style="font-size:11px">Format: name, email, phone, address</em></div>
+          </div>
         </div>
-      </div>
 
-      <div class="form-section">
-        <h2>📋 Format CSV</h2>
-        <div style="background:#f3f4f6;padding:15px;border-radius:8px;font-size:12px;font-family:monospace;overflow-x:auto">
-          <strong>Pelanggan:</strong><br>
-          name,email,phone,address<br>
-          PT Maju,info@maju.com,081234567,Jakarta<br><br>
-          
-          <strong>Piutang:</strong><br>
-          invoice_no,customer_id,amount,due_date,status<br>
-          INV-001,1,5000000,2026-07-20,unpaid<br><br>
-          
-          <strong>Pembayaran:</strong><br>
-          invoice_id,amount,payment_date,method,notes<br>
-          1,2000000,2026-07-10,Transfer,DP awal
+        <div style="margin-bottom:20px">
+          <h3 style="font-size:14px;margin-bottom:10px">Impor Piutang</h3>
+          <div class="upload-area" onclick="document.getElementById('fileInput').onchange=function(e){uploadInvoicesFromCSV(e.target.files[0])};document.getElementById('fileInput').click()">
+            <div style="font-size:13px;color:#666">Klik atau drag file CSV di sini<br><em style="font-size:11px">Format: invoice_no, customer_id, amount, due_date, status</em></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:20px">
+          <h3 style="font-size:14px;margin-bottom:10px">Impor Pembayaran</h3>
+          <div class="upload-area" onclick="document.getElementById('fileInput').onchange=function(e){uploadPaymentsFromCSV(e.target.files[0])};document.getElementById('fileInput').click()">
+            <div style="font-size:13px;color:#666">Klik atau drag file CSV di sini<br><em style="font-size:11px">Format: invoice_id, amount, payment_date, method, notes</em></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1116,47 +1093,25 @@ function renderImportExport() {
 function renderSettings() {
   return `
     <div class="container">
-      <h1 class="page-title">Pengaturan</h1>
+      <h1 class="page-title">Pengaturan Aplikasi</h1>
       
       <div class="form-section">
-        <h2>Profil Pengguna</h2>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Nama</label>
-            <input type="text" value="${currentUser?.name || 'N/A'}" disabled>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" value="${currentUser?.email || 'N/A'}" disabled>
-          </div>
-          <div class="form-group">
-            <label>Role</label>
-            <input type="text" value="${currentUser?.role || 'N/A'}" disabled>
-          </div>
-        </div>
+        <h2>Tentang PiutangKu</h2>
+        <p><strong>Sistem Manajemen Piutang</strong><br>Versi 1.0</p>
+        <p style="color:#666;font-size:13px">Aplikasi berbasis web untuk mengelola piutang, pelanggan, dan pembayaran dengan antarmuka yang user-friendly.</p>
       </div>
 
       <div class="form-section">
-        <h2>Ubah Password</h2>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Password Baru</label>
-            <input type="password" id="newPassword" placeholder="Masukkan password baru">
-          </div>
-          <div class="form-group">
-            <label>Konfirmasi Password</label>
-            <input type="password" id="confirmPassword" placeholder="Konfirmasi password">
-          </div>
-        </div>
-        <button class="btn btn-primary" onclick="changePassword()">Simpan Password Baru</button>
+        <h2>Data Lokal</h2>
+        <p style="color:#666;margin-bottom:15px;font-size:13px">Semua data disimpan di browser lokal Anda menggunakan IndexedDB. Data tidak dikirim ke server manapun.</p>
+        <button class="btn btn-danger" onclick="if(confirm('Apakah Anda yakin ingin menghapus semua data? Tindakan ini tidak dapat dibatalkan!')){localStorage.clear();indexedDB.deleteDatabase('PiutangKuDB');toast('Data berhasil dihapus','success');setTimeout(()=>location.reload(),1000)}">🗑️ Hapus Semua Data</button>
       </div>
 
       <div class="form-section">
-        <h2>Tentang Aplikasi</h2>
-        <p><strong>PiutangKu v2.1 (STABLE)</strong></p>
-        <p style="font-size:12px;color:#666">Sistem Manajemen Piutang Local-First dengan Import/Export</p>
-        <p style="font-size:12px;color:#666">Data disimpan secara lokal di perangkat Anda menggunakan IndexedDB</p>
-        <p style="font-size:12px;color:#10b981;margin-top:10px">✅ Semua bug sudah diperbaiki</p>
+        <h2>Akun Pengguna</h2>
+        <p><strong>Email:</strong> ${currentUser.email}</p>
+        <p><strong>Role:</strong> ${currentUser.role}</p>
+        <p><strong>Status:</strong> ${currentUser.status}</p>
       </div>
     </div>
   `;
@@ -1164,10 +1119,10 @@ function renderSettings() {
 
 // ============ CRUD FUNCTIONS ============
 function addUser() {
-  const name = document.getElementById('userName')?.value || '';
-  const email = document.getElementById('userEmail')?.value || '';
-  const password = document.getElementById('userPassword')?.value || '';
-  const role = document.getElementById('userRole')?.value || 'sales';
+  const name = document.getElementById('userName').value;
+  const email = document.getElementById('userEmail').value;
+  const password = document.getElementById('userPassword').value;
+  const role = document.getElementById('userRole').value;
 
   if (!name || !email || !password) {
     toast('Semua field harus diisi', 'error');
@@ -1180,22 +1135,23 @@ function addUser() {
     document.getElementById('userEmail').value = '';
     document.getElementById('userPassword').value = '';
     render();
+  } else {
+    toast('Gagal menambahkan pengguna', 'error');
   }
 }
 
 function deleteUser(id) {
-  if (!confirm('Yakin ingin menghapus pengguna ini?')) return;
-  if (execSQL('DELETE FROM users WHERE id = ?', [id])) {
-    toast('Pengguna dihapus', 'success');
+  if (confirm('Apakah Anda yakin ingin menghapus pengguna ini?')) {
+    execSQL('DELETE FROM users WHERE id = ?', [id]);
     render();
   }
 }
 
 function addCustomer() {
-  const name = document.getElementById('customerName')?.value || '';
-  const email = document.getElementById('customerEmail')?.value || '';
-  const phone = document.getElementById('customerPhone')?.value || '';
-  const address = document.getElementById('customerAddress')?.value || '';
+  const name = document.getElementById('customerName').value;
+  const email = document.getElementById('customerEmail').value;
+  const phone = document.getElementById('customerPhone').value;
+  const address = document.getElementById('customerAddress').value;
 
   if (!name) {
     toast('Nama pelanggan harus diisi', 'error');
@@ -1209,222 +1165,123 @@ function addCustomer() {
     document.getElementById('customerPhone').value = '';
     document.getElementById('customerAddress').value = '';
     render();
+  } else {
+    toast('Gagal menambahkan pelanggan', 'error');
   }
 }
 
 function deleteCustomer(id) {
-  if (!confirm('Yakin ingin menghapus pelanggan ini?')) return;
-  if (execSQL('DELETE FROM customers WHERE id = ?', [id])) {
-    toast('Pelanggan dihapus', 'success');
+  if (confirm('Apakah Anda yakin ingin menghapus pelanggan ini? Data terkait akan tetap ada.')) {
+    execSQL('DELETE FROM customers WHERE id = ?', [id]);
     render();
   }
 }
 
 function addInvoice() {
-  const customerId = document.getElementById('invoiceCustomer')?.value || '';
-  const invoiceNo = document.getElementById('invoiceNo')?.value || '';
-  const amount = parseFloat(document.getElementById('invoiceAmount')?.value || 0);
-  const dueDate = document.getElementById('invoiceDueDate')?.value || '';
+  const customerId = document.getElementById('invoiceCustomer').value;
+  const invoiceNo = document.getElementById('invoiceNo').value;
+  const amount = document.getElementById('invoiceAmount').value;
+  const dueDate = document.getElementById('invoiceDueDate').value;
 
-  if (!customerId || !invoiceNo || amount <= 0 || !dueDate) {
-    toast('Semua field harus diisi dengan benar', 'error');
+  if (!customerId || !invoiceNo || !amount || !dueDate) {
+    toast('Semua field harus diisi', 'error');
     return;
   }
 
-  if (execSQL('INSERT INTO invoices (customer_id, invoice_no, amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)', 
-    [customerId, invoiceNo, amount, amount, dueDate, 'unpaid'])) {
+  if (execSQL('INSERT INTO invoices (invoice_no, customer_id, amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)', [invoiceNo, parseInt(customerId), parseFloat(amount), parseFloat(amount), dueDate, 'unpaid'])) {
     toast('Faktur berhasil ditambahkan', 'success');
     document.getElementById('invoiceCustomer').value = '';
     document.getElementById('invoiceNo').value = '';
     document.getElementById('invoiceAmount').value = '';
     render();
+  } else {
+    toast('Gagal menambahkan faktur', 'error');
   }
 }
 
 function deleteInvoice(id) {
-  if (!confirm('Yakin ingin menghapus faktur ini?')) return;
-  if (execSQL('DELETE FROM invoices WHERE id = ?', [id])) {
-    toast('Faktur dihapus', 'success');
+  if (confirm('Apakah Anda yakin ingin menghapus faktur ini?')) {
+    execSQL('DELETE FROM invoices WHERE id = ?', [id]);
     render();
   }
 }
 
 function addPayment() {
-  const invoiceId = document.getElementById('paymentInvoice')?.value || '';
-  const amount = parseFloat(document.getElementById('paymentAmount')?.value || 0);
-  const paymentDate = document.getElementById('paymentDate')?.value || '';
-  const method = document.getElementById('paymentMethod')?.value || '';
+  const invoiceId = document.getElementById('paymentInvoice').value;
+  const amount = document.getElementById('paymentAmount').value;
+  const paymentDate = document.getElementById('paymentDate').value;
+  const method = document.getElementById('paymentMethod').value;
+  const notes = document.getElementById('paymentNotes').value;
 
-  if (!invoiceId || amount <= 0 || !paymentDate) {
-    toast('Semua field harus diisi dengan benar', 'error');
+  if (!invoiceId || !amount || !paymentDate) {
+    toast('Semua field harus diisi', 'error');
     return;
   }
 
-  if (execSQL('INSERT INTO payments (invoice_id, amount, payment_date, method) VALUES (?, ?, ?, ?)', [invoiceId, amount, paymentDate, method])) {
-    const invoice = getQuery('SELECT * FROM invoices WHERE id = ?', [invoiceId])[0];
-    if (invoice) {
-      const totalPaid = (invoice.paid_amount || 0) + amount;
-      const remaining = invoice.amount - totalPaid;
-      let status = 'unpaid';
-      if (totalPaid >= invoice.amount) {
-        status = 'paid';
-      } else if (totalPaid > 0) {
-        status = 'partial';
-      }
-      execSQL('UPDATE invoices SET paid_amount = ?, remaining_amount = ?, status = ? WHERE id = ?', 
-        [totalPaid, Math.max(0, remaining), status, invoiceId]);
-    }
+  const invoice = getQuery('SELECT * FROM invoices WHERE id = ?', [invoiceId])[0];
+  if (!invoice) {
+    toast('Faktur tidak ditemukan', 'error');
+    return;
+  }
+
+  const newPaidAmount = invoice.paid_amount + parseFloat(amount);
+  const newRemainingAmount = invoice.amount - newPaidAmount;
+  const newStatus = newRemainingAmount === 0 ? 'paid' : newRemainingAmount < invoice.amount ? 'partial' : 'unpaid';
+
+  if (execSQL('INSERT INTO payments (invoice_id, amount, payment_date, method, notes) VALUES (?, ?, ?, ?, ?)', [invoiceId, parseFloat(amount), paymentDate, method, notes])) {
+    execSQL('UPDATE invoices SET paid_amount = ?, remaining_amount = ?, status = ? WHERE id = ?', [newPaidAmount, newRemainingAmount, newStatus, invoiceId]);
     toast('Pembayaran berhasil dicatat', 'success');
     document.getElementById('paymentInvoice').value = '';
     document.getElementById('paymentAmount').value = '';
+    document.getElementById('paymentNotes').value = '';
+    render();
+  } else {
+    toast('Gagal mencatat pembayaran', 'error');
+  }
+}
+
+function deletePayment(id) {
+  if (confirm('Apakah Anda yakin ingin menghapus pembayaran ini?')) {
+    const payment = getQuery('SELECT * FROM payments WHERE id = ?', [id])[0];
+    if (payment) {
+      const invoice = getQuery('SELECT * FROM invoices WHERE id = ?', [payment.invoice_id])[0];
+      if (invoice) {
+        const newPaidAmount = invoice.paid_amount - payment.amount;
+        const newRemainingAmount = invoice.amount - newPaidAmount;
+        const newStatus = newRemainingAmount === 0 ? 'paid' : newRemainingAmount < invoice.amount ? 'partial' : 'unpaid';
+        execSQL('UPDATE invoices SET paid_amount = ?, remaining_amount = ?, status = ? WHERE id = ?', [newPaidAmount, newRemainingAmount, newStatus, payment.invoice_id]);
+      }
+    }
+    execSQL('DELETE FROM payments WHERE id = ?', [id]);
     render();
   }
 }
 
-function generateReport() {
-  toast('Laporan ditampilkan di bawah', 'success');
-}
-
-function changePassword() {
-  const newPass = document.getElementById('newPassword')?.value || '';
-  const confirmPass = document.getElementById('confirmPassword')?.value || '';
-
-  if (!newPass) {
-    toast('Password baru harus diisi', 'error');
-    return;
-  }
-
-  if (newPass !== confirmPass) {
-    toast('Password tidak cocok', 'error');
-    return;
-  }
-
-  if (execSQL('UPDATE users SET password = ? WHERE id = ?', [newPass, currentUser.id])) {
-    toast('Password berhasil diubah', 'success');
-    currentUser.password = newPass;
-    document.getElementById('newPassword').value = '';
-    document.getElementById('confirmPassword').value = '';
+// ============ MAIN RENDER FUNCTION ============
+async function render() {
+  const app = document.getElementById('app');
+  if (currentPage === 'login') {
+    app.innerHTML = renderLogin();
+  } else if (currentUser) {
+    app.innerHTML = renderApp();
+  } else {
+    app.innerHTML = renderLogin();
   }
 }
 
-// ============ EXPORT FUNCTIONS ============
-function exportCustomers() {
-  const data = getQuery('SELECT id, name, email, phone, address, created_at FROM customers ORDER BY id DESC');
-  downloadCSV(data, `pelanggan_${today()}.csv`);
-}
-
-function exportInvoices() {
-  const data = getQuery('SELECT id, invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status, created_at FROM invoices ORDER BY id DESC');
-  downloadCSV(data, `piutang_${today()}.csv`);
-}
-
-function exportPayments() {
-  const data = getQuery('SELECT id, invoice_id, amount, payment_date, method, created_at FROM payments ORDER BY id DESC');
-  downloadCSV(data, `pembayaran_${today()}.csv`);
-}
-
-function exportAll() {
-  const customers = getQuery('SELECT id, name, email, phone, address, created_at FROM customers');
-  const invoices = getQuery('SELECT id, invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status, created_at FROM invoices');
-  const payments = getQuery('SELECT id, invoice_id, amount, payment_date, method, created_at FROM payments');
-  
-  const timestamp = today();
-  downloadCSV(customers, `piutangku_pelanggan_${timestamp}.csv`);
-  setTimeout(() => downloadCSV(invoices, `piutangku_piutang_${timestamp}.csv`), 500);
-  setTimeout(() => downloadCSV(payments, `piutangku_pembayaran_${timestamp}.csv`), 1000);
-}
-
-// ============ IMPORT FUNCTIONS ============
-function triggerFileUpload(type) {
-  const input = document.getElementById('fileInput');
-  if (input) {
-    input.dataset.type = type;
-    input.click();
-  }
-}
-
-// Setup file input listener
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', setupFileListener);
-} else {
-  setupFileListener();
-}
-
-function setupFileListener() {
-  const fileInput = document.getElementById('fileInput');
-  if (fileInput) {
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      const type = e.target.dataset.type;
-      if (!file) return;
-      
-      if (type === 'customers') uploadCustomersFromCSV(file);
-      else if (type === 'invoices') uploadInvoicesFromCSV(file);
-      else if (type === 'payments') uploadPaymentsFromCSV(file);
-      
-      e.target.value = '';
-    });
-  }
-}
-
-// ============ NAVIGATION ============
-function goToPage(page) {
-  currentPage = page;
+// ============ INITIALIZE APP ============
+async function initApp() {
+  const sqlWasm = await SQL();
+  db = new sqlWasm.Database();
+  createSchema();
+  seedData();
   render();
 }
 
-function handleLogin() {
-  const email = document.getElementById('loginEmail')?.value || '';
-  const password = document.getElementById('loginPassword')?.value || '';
-  login(email, password);
-}
-
-function updateInvoiceInfo() {
-  const select = document.getElementById('paymentInvoice');
-  if (select && select.selectedOptions[0]) {
-    const amount = select.selectedOptions[0].getAttribute('data-amount');
-    document.getElementById('paymentAmount').placeholder = `Maks: ${fmt(amount)}`;
-  }
-}
-
-// ============ MAIN RENDER ============
-function render() {
-  const app = document.getElementById('app');
-  if (app) {
-    app.innerHTML = !currentUser ? renderLogin() : renderApp();
-    // Re-attach file listener after render
-    setupFileListener();
-  }
-}
-
-// ============ BOOT ============
-async function boot() {
-  try {
-    SQL = await initSqlJs({
-      locateFile: file => `https://cdn.jsdelivr.net/npm/sql.js@1.10.3/dist/${file}`
-    });
-
-    let savedDB = await loadDB();
-    if (savedDB) {
-      db = new SQL.Database(new Uint8Array(savedDB));
-    } else {
-      db = new SQL.Database();
-      createSchema();
-      seedData();
-      await saveDB();
-    }
-
-    render();
-  } catch (error) {
-    console.error('Boot error:', error);
-    const app = document.getElementById('app');
-    if (app) {
-      app.innerHTML = '<div style="padding:20px;color:red">Error: ' + error.message + '</div>';
-    }
-  }
-}
-
-boot();
+initApp().catch(e => {
+  console.error('Init error:', e);
+  document.getElementById('app').innerHTML = '<div style="padding:20px;color:red">Error: ' + e.message + '</div>';
+});
 </script>
 </body>
 </html>
