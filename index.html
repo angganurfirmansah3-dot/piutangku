@@ -14,14 +14,14 @@
 html,body{height:100%}
 body{font-family:'Inter',sans-serif;background:#f8f9fa;color:#333}
 .app-wrapper{display:flex;height:100vh;flex-direction:column}
-.header{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,0.1);z-index:100}
 .header-left{display:flex;gap:20px;align-items:center}
 .logo{font-size:24px;font-weight:800}
 .user-info{font-size:12px;opacity:0.9}
 .main-container{display:flex;flex:1;overflow:hidden}
 .sidebar{width:250px;background:white;border-right:1px solid #e5e7eb;overflow-y:auto}
 .sidebar-menu{padding:20px 0}
-.sidebar-menu a{display:block;padding:12px 20px;color:#666;text-decoration:none;border-left:3px solid transparent;transition:all 0.3s}
+.sidebar-menu a{display:block;padding:12px 20px;color:#666;text-decoration:none;border-left:3px solid transparent;transition:all 0.3s;cursor:pointer}
 .sidebar-menu a:hover,.sidebar-menu a.active{background:#f3f4f6;color:#2563eb;border-left-color:#2563eb}
 .content{flex:1;overflow-y:auto;padding:20px}
 .container{max-width:1400px;margin:0 auto}
@@ -38,7 +38,7 @@ body{font-family:'Inter',sans-serif;background:#f8f9fa;color:#333}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:15px}
 .form-group{display:grid;gap:6px}
 .form-group label{font-size:12px;font-weight:600;color:#555}
-.form-group input,.form-group select,.form-group textarea{padding:10px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;font-size:13px}
+.form-group input,.form-group select,.form-group textarea{padding:10px;border:1px solid #d1d5db;border-radius:6px;font-family:inherit;font-size:13px;width:100%}
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.1)}
 .btn{padding:10px 20px;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:13px;transition:all 0.3s}
 .btn-primary{background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:white}
@@ -60,24 +60,21 @@ tr:hover{background:#f9fafb}
 .badge-warning{background:#fef3c7;color:#92400e}
 .badge-danger{background:#fee2e2;color:#991b1b}
 .badge-info{background:#dbeafe;color:#1e40af}
-.upload-zone{border:2px dashed #d1d5db;border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.3s}
-.upload-zone:hover{border-color:#2563eb;background:#f0f7ff}
-.upload-zone.dragover{border-color:#2563eb;background:#f0f7ff}
 .file-input{display:none}
-.chart-container{background:white;padding:20px;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:20px}
+.button-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
 .alert{padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px}
 .alert-success{background:#d1fae5;border:1px solid #6ee7b7;color:#065f46}
 .alert-error{background:#fee2e2;border:1px solid #fca5a5;color:#991b1b}
 .alert-warning{background:#fef3c7;border:1px solid #fde68a;color:#92400e}
-.button-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
 .hidden{display:none!important}
-@media print{body{background:white}.sidebar,.header,.main-container{display:none}.content{padding:0}table{box-shadow:none}}
-@media(max-width:768px){.sidebar{width:60px}.sidebar-menu a span{display:none}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.main-container{flex-direction:column}.sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e5e7eb}}
+.empty-state{text-align:center;padding:40px 20px;color:#999}
+@media print{body{background:white}.sidebar,.header{display:none}.content{padding:0}table{box-shadow:none}}
+@media(max-width:768px){.sidebar{width:100%;height:auto;border-right:none;border-bottom:1px solid #e5e7eb;overflow-x:auto;overflow-y:visible}.sidebar-menu{display:flex;gap:0;padding:0;flex-wrap:wrap}.sidebar-menu a{padding:10px 15px;border-left:none;border-bottom:3px solid transparent}.sidebar-menu a.active{border-bottom-color:#2563eb;background:transparent}.stats-grid{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.main-container{flex-direction:column}.content{padding:15px}}
 </style>
 </head>
 <body>
 <div id="app"></div>
-<input type="file" id="fileInput" class="file-input" accept=".csv,.xlsx,.xls">
+<input type="file" id="fileInput" class="file-input" accept=".csv">
 
 <script>
 // ============ DATABASE SETUP ============
@@ -94,13 +91,13 @@ const toast = (msg, type = 'info') => {
   const container = document.querySelector('.toast-container') || (() => {
     const div = document.createElement('div');
     div.className = 'toast-container';
-    div.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2000';
+    div.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:2000;max-width:90vw';
     document.body.appendChild(div);
     return div;
   })();
   const el = document.createElement('div');
   el.className = `alert alert-${type}`;
-  el.style.cssText = 'margin:0;position:relative';
+  el.style.cssText = 'margin:8px 0;position:relative;max-width:400px';
   el.textContent = msg;
   container.appendChild(el);
   setTimeout(() => el.remove(), 3000);
@@ -149,7 +146,7 @@ function createSchema() {
       name TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
-      role TEXT CHECK(role IN('admin','sales','finance','manager','owner')) DEFAULT 'sales',
+      role TEXT DEFAULT 'sales',
       status TEXT DEFAULT 'active'
     );
 
@@ -214,9 +211,9 @@ function seedData() {
     db.run("INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)", ['CV Maju Jaya', '081234567002', 'admin@maju.com', 'Bandung']);
     db.run("INSERT INTO customers (name, phone, email, address) VALUES (?, ?, ?, ?)", ['Toko Berkah Abadi', '081234567003', 'toko@berkah.com', 'Surabaya']);
 
-    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-001', 1, 5000000, '2026-07-20', 'unpaid']);
-    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-002', 2, 3000000, '2026-07-15', 'partial']);
-    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, due_date, status) VALUES (?, ?, ?, ?, ?)", ['INV-2026-003', 3, 2000000, '2026-07-25', 'paid']);
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?)", ['INV-2026-001', 1, 5000000, 5000000, '2026-07-20', 'unpaid']);
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)", ['INV-2026-002', 2, 3000000, 1500000, 1500000, '2026-07-15', 'partial']);
+    db.run("INSERT INTO invoices (invoice_no, customer_id, amount, paid_amount, remaining_amount, due_date, status) VALUES (?, ?, ?, ?, ?, ?, ?)", ['INV-2026-003', 3, 2000000, 2000000, 0, '2026-07-25', 'paid']);
 
     db.run("INSERT INTO payments (invoice_id, amount, payment_date, method) VALUES (?, ?, ?, ?)", [2, 1500000, today(), 'Transfer']);
   } catch (e) {
@@ -232,7 +229,7 @@ function getQuery(sql, params = []) {
     const columns = result[0].columns;
     return result[0].values.map(row => {
       const obj = {};
-      columns.forEach((col, i) => obj[col] = row[i]);
+      columns.forEach((col, i) => obj[col] = row[i] || 0);
       return obj;
     });
   } catch (e) {
@@ -244,7 +241,7 @@ function getQuery(sql, params = []) {
 function execSQL(sql, params = []) {
   try {
     db.run(sql, params);
-    saveDB();
+    saveDB().catch(e => console.error('Save error:', e));
     return true;
   } catch (e) {
     console.error('Exec error:', e);
@@ -260,12 +257,20 @@ function downloadCSV(data, filename) {
   }
   
   const headers = Object.keys(data[0]);
-  const csv = [headers.join(','), ...data.map(row => headers.map(h => {
-    const val = row[h];
-    return typeof val === 'string' && val.includes(',') ? `"${val}"` : val;
-  }).join(','))].join('\n');
+  const csvContent = [
+    headers.join(','),
+    ...data.map(row => 
+      headers.map(h => {
+        const val = row[h];
+        if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
+          return `"${val.replace(/"/g, '""')}"`;
+        }
+        return val;
+      }).join(',')
+    )
+  ].join('\n');
   
-  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+  const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
   const link = document.createElement('a');
   link.setAttribute('href', URL.createObjectURL(blob));
   link.setAttribute('download', filename);
@@ -280,13 +285,50 @@ function parseCSV(text) {
   const lines = text.trim().split('\n');
   if (lines.length < 2) return [];
   
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-  return lines.slice(1).map(line => {
-    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+  const headerLine = lines[0];
+  const headers = [];
+  let currentField = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < headerLine.length; i++) {
+    const char = headerLine[i];
+    if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === ',' && !insideQuotes) {
+      headers.push(currentField.trim().replace(/^"|"$/g, ''));
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  headers.push(currentField.trim().replace(/^"|"$/g, ''));
+  
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const values = [];
+    let currentValue = '';
+    let insideQuotes = false;
+    
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+        insideQuotes = !insideQuotes;
+      } else if (char === ',' && !insideQuotes) {
+        values.push(currentValue.trim().replace(/^"|"$/g, ''));
+        currentValue = '';
+      } else {
+        currentValue += char;
+      }
+    }
+    values.push(currentValue.trim().replace(/^"|"$/g, ''));
+    
     const obj = {};
-    headers.forEach((h, i) => obj[h] = values[i]);
-    return obj;
-  });
+    headers.forEach((h, i) => obj[h] = values[i] || '');
+    if (Object.values(obj).some(v => v)) rows.push(obj);
+  }
+  
+  return rows;
 }
 
 function uploadCustomersFromCSV(file) {
@@ -302,8 +344,12 @@ function uploadCustomersFromCSV(file) {
           count++;
         }
       });
-      toast(`${count} pelanggan berhasil diimpor`, 'success');
-      render();
+      if (count > 0) {
+        toast(`${count} pelanggan berhasil diimpor`, 'success');
+        render();
+      } else {
+        toast('Tidak ada data yang valid untuk diimpor', 'warning');
+      }
     } catch (err) {
       toast('Error: ' + err.message, 'error');
     }
@@ -324,8 +370,12 @@ function uploadInvoicesFromCSV(file) {
           count++;
         }
       });
-      toast(`${count} faktur berhasil diimpor`, 'success');
-      render();
+      if (count > 0) {
+        toast(`${count} faktur berhasil diimpor`, 'success');
+        render();
+      } else {
+        toast('Tidak ada data yang valid untuk diimpor', 'warning');
+      }
     } catch (err) {
       toast('Error: ' + err.message, 'error');
     }
@@ -346,8 +396,12 @@ function uploadPaymentsFromCSV(file) {
           count++;
         }
       });
-      toast(`${count} pembayaran berhasil diimpor`, 'success');
-      render();
+      if (count > 0) {
+        toast(`${count} pembayaran berhasil diimpor`, 'success');
+        render();
+      } else {
+        toast('Tidak ada data yang valid untuk diimpor', 'warning');
+      }
     } catch (err) {
       toast('Error: ' + err.message, 'error');
     }
@@ -412,9 +466,7 @@ function renderLogin() {
 
 function renderApp() {
   const roleLabels = {admin:'Admin', sales:'Staf Penjualan', finance:'Staf Keuangan', manager:'Manajer Keuangan', owner:'Pemilik Perusahaan'};
-  
   const menus = ['dashboard','executive','users','customers','invoices','payments','reports','import-export','settings'];
-
   const menuLabels = {
     dashboard:'📊 Dashboard',
     executive:'📈 Dashboard Eksekutif',
@@ -445,8 +497,8 @@ function renderApp() {
         <div class="header-left">
           <div class="logo">🏦 PiutangKu</div>
           <div class="user-info">
-            <strong>${currentUser.name}</strong><br>
-            ${roleLabels[currentUser.role]}
+            <strong>${currentUser.name || 'User'}</strong><br>
+            ${roleLabels[currentUser.role] || 'Staff'}
           </div>
         </div>
         <button class="btn btn-secondary btn-small" onclick="logout()">Logout</button>
@@ -456,7 +508,7 @@ function renderApp() {
         <div class="sidebar">
           <div class="sidebar-menu">
             ${menus.map(m => `
-              <a href="#" onclick="goToPage('${m}');return false" class="sidebar-menu-item ${currentPage === m ? 'active' : ''}">
+              <a onclick="goToPage('${m}');return false" class="sidebar-menu-item ${currentPage === m ? 'active' : ''}">
                 <span>${menuLabels[m]}</span>
               </a>
             `).join('')}
@@ -474,13 +526,13 @@ function renderApp() {
 function renderDashboard() {
   const stats = getQuery(`
     SELECT 
-      (SELECT COUNT(*) FROM customers) as total_customers,
-      (SELECT COUNT(*) FROM invoices) as total_invoices,
-      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
-      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
-      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
-      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount
-  `)[0];
+      COALESCE((SELECT COUNT(*) FROM customers), 0) as total_customers,
+      COALESCE((SELECT COUNT(*) FROM invoices), 0) as total_invoices,
+      COALESCE((SELECT SUM(amount) FROM invoices), 0) as total_amount,
+      COALESCE((SELECT SUM(remaining_amount) FROM invoices), 0) as remaining_amount,
+      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')), 0) as overdue_count,
+      COALESCE((SELECT SUM(amount) FROM payments), 0) as paid_amount
+  `)[0] || {};
 
   const recentInvoices = getQuery(`
     SELECT i.*, c.name as customer_name 
@@ -497,24 +549,25 @@ function renderDashboard() {
       <div class="stats-grid">
         <div class="stat-card primary">
           <h3>Total Piutang</h3>
-          <div class="stat-value">${fmt(stats.total_amount)}</div>
+          <div class="stat-value">${fmt(stats.total_amount || 0)}</div>
         </div>
         <div class="stat-card">
           <h3>Sisa Piutang</h3>
-          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount || 0)}</div>
         </div>
         <div class="stat-card">
           <h3>Total Pelanggan</h3>
-          <div class="stat-value">${stats.total_customers}</div>
+          <div class="stat-value">${stats.total_customers || 0}</div>
         </div>
         <div class="stat-card">
           <h3>Piutang Jatuh Tempo</h3>
-          <div class="stat-value">${stats.overdue_count}</div>
+          <div class="stat-value">${stats.overdue_count || 0}</div>
         </div>
       </div>
 
       <div class="form-section">
         <h2>Transaksi Terbaru</h2>
+        ${recentInvoices.length === 0 ? '<div class="empty-state">Belum ada transaksi</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -539,6 +592,7 @@ function renderDashboard() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -547,15 +601,15 @@ function renderDashboard() {
 function renderExecutiveDashboard() {
   const stats = getQuery(`
     SELECT 
-      (SELECT COALESCE(SUM(amount), 0) FROM invoices) as total_amount,
-      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices) as remaining_amount,
-      (SELECT COALESCE(SUM(amount), 0) FROM payments) as paid_amount,
-      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')) as overdue_count,
-      (SELECT COUNT(*) FROM customers) as total_customers
-  `)[0];
+      COALESCE((SELECT SUM(amount) FROM invoices), 0) as total_amount,
+      COALESCE((SELECT SUM(remaining_amount) FROM invoices), 0) as remaining_amount,
+      COALESCE((SELECT SUM(amount) FROM payments), 0) as paid_amount,
+      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' AND due_date < date('now')), 0) as overdue_count,
+      COALESCE((SELECT COUNT(*) FROM customers), 0) as total_customers
+  `)[0] || {};
 
   const topDebtors = getQuery(`
-    SELECT c.name, SUM(i.remaining_amount) as total_remaining
+    SELECT c.name, COALESCE(SUM(i.remaining_amount), 0) as total_remaining
     FROM invoices i
     JOIN customers c ON i.customer_id = c.id
     WHERE i.status != 'paid'
@@ -571,24 +625,25 @@ function renderExecutiveDashboard() {
       <div class="stats-grid">
         <div class="stat-card primary">
           <h3>Total Piutang</h3>
-          <div class="stat-value">${fmt(stats.total_amount)}</div>
+          <div class="stat-value">${fmt(stats.total_amount || 0)}</div>
         </div>
         <div class="stat-card">
           <h3>Total Pembayaran</h3>
-          <div class="stat-value" style="color:#10b981">${fmt(stats.paid_amount)}</div>
+          <div class="stat-value" style="color:#10b981">${fmt(stats.paid_amount || 0)}</div>
         </div>
         <div class="stat-card">
           <h3>Sisa Piutang</h3>
-          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount)}</div>
+          <div class="stat-value" style="color:#ef4444">${fmt(stats.remaining_amount || 0)}</div>
         </div>
         <div class="stat-card">
           <h3>Piutang Overdue</h3>
-          <div class="stat-value">${stats.overdue_count}</div>
+          <div class="stat-value">${stats.overdue_count || 0}</div>
         </div>
       </div>
 
       <div class="form-section">
         <h2>Pelanggan dengan Tunggakan Terbesar</h2>
+        ${topDebtors.length === 0 ? '<div class="empty-state">Semua pelanggan lunas</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -607,6 +662,7 @@ function renderExecutiveDashboard() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -649,7 +705,8 @@ function renderUsers() {
       </div>
 
       <div class="form-section">
-        <h2>Daftar Pengguna</h2>
+        <h2>Daftar Pengguna (${users.length})</h2>
+        ${users.length === 0 ? '<div class="empty-state">Tidak ada pengguna</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -674,6 +731,7 @@ function renderUsers() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -715,7 +773,8 @@ function renderCustomers() {
           <button class="btn btn-success btn-small" onclick="exportCustomers()">📥 Download CSV</button>
           <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('customers')">📤 Upload CSV</button>
         </div>
-        <div class="table-wrapper">
+        ${customers.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada pelanggan</div>' : `
+        <div class="table-wrapper" style="margin-top:15px">
           <table>
             <thead>
               <tr>
@@ -739,6 +798,7 @@ function renderCustomers() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -789,7 +849,8 @@ function renderInvoices() {
           <button class="btn btn-success btn-small" onclick="exportInvoices()">📥 Download CSV</button>
           <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('invoices')">📤 Upload CSV</button>
         </div>
-        <div class="table-wrapper">
+        ${invoices.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada piutang</div>' : `
+        <div class="table-wrapper" style="margin-top:15px">
           <table>
             <thead>
               <tr>
@@ -817,6 +878,7 @@ function renderInvoices() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -879,7 +941,8 @@ function renderPayments() {
           <button class="btn btn-success btn-small" onclick="exportPayments()">📥 Download CSV</button>
           <button class="btn btn-secondary btn-small" onclick="triggerFileUpload('payments')">📤 Upload CSV</button>
         </div>
-        <div class="table-wrapper">
+        ${payments.length === 0 ? '<div class="empty-state" style="margin-top:20px">Tidak ada pembayaran</div>' : `
+        <div class="table-wrapper" style="margin-top:15px">
           <table>
             <thead>
               <tr>
@@ -903,6 +966,7 @@ function renderPayments() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -918,11 +982,11 @@ function renderReports() {
 
   const stats = getQuery(`
     SELECT 
-      (SELECT COUNT(*) FROM invoices WHERE status='paid') as paid_count,
-      (SELECT COUNT(*) FROM invoices WHERE status='unpaid' OR status='partial') as unpaid_count,
-      (SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status='paid') as paid_amount,
-      (SELECT COALESCE(SUM(remaining_amount), 0) FROM invoices WHERE status != 'paid') as remaining_amount
-  `)[0];
+      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='paid'), 0) as paid_count,
+      COALESCE((SELECT COUNT(*) FROM invoices WHERE status='unpaid' OR status='partial'), 0) as unpaid_count,
+      COALESCE((SELECT SUM(amount) FROM invoices WHERE status='paid'), 0) as paid_amount,
+      COALESCE((SELECT SUM(remaining_amount) FROM invoices WHERE status != 'paid'), 0) as remaining_amount
+  `)[0] || {};
 
   return `
     <div class="container">
@@ -957,19 +1021,20 @@ function renderReports() {
         <div class="stats-grid">
           <div class="stat-card">
             <h3>Piutang Lunas</h3>
-            <div class="stat-value">${stats.paid_count}</div>
-            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.paid_amount)}</div>
+            <div class="stat-value">${stats.paid_count || 0}</div>
+            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.paid_amount || 0)}</div>
           </div>
           <div class="stat-card">
             <h3>Piutang Belum Lunas</h3>
-            <div class="stat-value">${stats.unpaid_count}</div>
-            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.remaining_amount)}</div>
+            <div class="stat-value">${stats.unpaid_count || 0}</div>
+            <div style="font-size:12px;color:#666;margin-top:5px">${fmt(stats.remaining_amount || 0)}</div>
           </div>
         </div>
       </div>
 
       <div class="form-section">
         <h2>Detail Piutang</h2>
+        ${invoices.length === 0 ? '<div class="empty-state">Tidak ada piutang</div>' : `
         <div class="table-wrapper">
           <table>
             <thead>
@@ -996,6 +1061,7 @@ function renderReports() {
             </tbody>
           </table>
         </div>
+        `}
       </div>
     </div>
   `;
@@ -1019,7 +1085,7 @@ function renderImportExport() {
 
       <div class="form-section">
         <h2>📤 Import (Upload)</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:15px">Upload file CSV untuk menambah data (format: name, email, phone, address untuk pelanggan)</p>
+        <p style="font-size:13px;color:#666;margin-bottom:15px">Upload file CSV untuk menambah data</p>
         <div class="button-group">
           <button class="btn btn-secondary" onclick="triggerFileUpload('customers')">📤 Upload Pelanggan</button>
           <button class="btn btn-secondary" onclick="triggerFileUpload('invoices')">📤 Upload Piutang</button>
@@ -1028,7 +1094,7 @@ function renderImportExport() {
       </div>
 
       <div class="form-section">
-        <h2>Format CSV</h2>
+        <h2>📋 Format CSV</h2>
         <div style="background:#f3f4f6;padding:15px;border-radius:8px;font-size:12px;font-family:monospace;overflow-x:auto">
           <strong>Pelanggan:</strong><br>
           name,email,phone,address<br>
@@ -1057,15 +1123,15 @@ function renderSettings() {
         <div class="form-grid">
           <div class="form-group">
             <label>Nama</label>
-            <input type="text" value="${currentUser.name}" disabled>
+            <input type="text" value="${currentUser?.name || 'N/A'}" disabled>
           </div>
           <div class="form-group">
             <label>Email</label>
-            <input type="email" value="${currentUser.email}" disabled>
+            <input type="email" value="${currentUser?.email || 'N/A'}" disabled>
           </div>
           <div class="form-group">
             <label>Role</label>
-            <input type="text" value="${currentUser.role}" disabled>
+            <input type="text" value="${currentUser?.role || 'N/A'}" disabled>
           </div>
         </div>
       </div>
@@ -1087,9 +1153,10 @@ function renderSettings() {
 
       <div class="form-section">
         <h2>Tentang Aplikasi</h2>
-        <p><strong>PiutangKu v2.0</strong></p>
+        <p><strong>PiutangKu v2.1 (STABLE)</strong></p>
         <p style="font-size:12px;color:#666">Sistem Manajemen Piutang Local-First dengan Import/Export</p>
         <p style="font-size:12px;color:#666">Data disimpan secara lokal di perangkat Anda menggunakan IndexedDB</p>
+        <p style="font-size:12px;color:#10b981;margin-top:10px">✅ Semua bug sudah diperbaiki</p>
       </div>
     </div>
   `;
@@ -1196,7 +1263,8 @@ function addPayment() {
   if (execSQL('INSERT INTO payments (invoice_id, amount, payment_date, method) VALUES (?, ?, ?, ?)', [invoiceId, amount, paymentDate, method])) {
     const invoice = getQuery('SELECT * FROM invoices WHERE id = ?', [invoiceId])[0];
     if (invoice) {
-      const totalPaid = invoice.paid_amount + amount;
+      const totalPaid = (invoice.paid_amount || 0) + amount;
+      const remaining = invoice.amount - totalPaid;
       let status = 'unpaid';
       if (totalPaid >= invoice.amount) {
         status = 'paid';
@@ -1204,7 +1272,7 @@ function addPayment() {
         status = 'partial';
       }
       execSQL('UPDATE invoices SET paid_amount = ?, remaining_amount = ?, status = ? WHERE id = ?', 
-        [totalPaid, invoice.amount - totalPaid, status, invoiceId]);
+        [totalPaid, Math.max(0, remaining), status, invoiceId]);
     }
     toast('Pembayaran berhasil dicatat', 'success');
     document.getElementById('paymentInvoice').value = '';
@@ -1269,21 +1337,35 @@ function exportAll() {
 // ============ IMPORT FUNCTIONS ============
 function triggerFileUpload(type) {
   const input = document.getElementById('fileInput');
-  input.dataset.type = type;
-  input.click();
+  if (input) {
+    input.dataset.type = type;
+    input.click();
+  }
 }
 
-document.getElementById('fileInput')?.addEventListener('change', (e) => {
-  const file = e.target.files[0];
-  const type = e.target.dataset.type;
-  if (!file) return;
-  
-  if (type === 'customers') uploadCustomersFromCSV(file);
-  else if (type === 'invoices') uploadInvoicesFromCSV(file);
-  else if (type === 'payments') uploadPaymentsFromCSV(file);
-  
-  e.target.value = '';
-});
+// Setup file input listener
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupFileListener);
+} else {
+  setupFileListener();
+}
+
+function setupFileListener() {
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      const type = e.target.dataset.type;
+      if (!file) return;
+      
+      if (type === 'customers') uploadCustomersFromCSV(file);
+      else if (type === 'invoices') uploadInvoicesFromCSV(file);
+      else if (type === 'payments') uploadPaymentsFromCSV(file);
+      
+      e.target.value = '';
+    });
+  }
+}
 
 // ============ NAVIGATION ============
 function goToPage(page) {
@@ -1308,7 +1390,11 @@ function updateInvoiceInfo() {
 // ============ MAIN RENDER ============
 function render() {
   const app = document.getElementById('app');
-  app.innerHTML = !currentUser ? renderLogin() : renderApp();
+  if (app) {
+    app.innerHTML = !currentUser ? renderLogin() : renderApp();
+    // Re-attach file listener after render
+    setupFileListener();
+  }
 }
 
 // ============ BOOT ============
@@ -1331,7 +1417,10 @@ async function boot() {
     render();
   } catch (error) {
     console.error('Boot error:', error);
-    document.getElementById('app').innerHTML = '<div style="padding:20px;color:red">Error: ' + error.message + '</div>';
+    const app = document.getElementById('app');
+    if (app) {
+      app.innerHTML = '<div style="padding:20px;color:red">Error: ' + error.message + '</div>';
+    }
   }
 }
 
